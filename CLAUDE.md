@@ -1,602 +1,726 @@
-# ServiceJS - Actor-Like Framework for TypeScript
+# ServiceJS - Claude Collaboration Guide
 
-## Project Overview
+**Last Updated:** 2025-10-23
+**Version:** 0.1.0
 
-ServiceJS is a capability-based, message-passing framework for building robust, testable, and scalable applications in TypeScript. It combines the actor model with capability-based security, hexagonal architecture, session types, and event sourcing.
+---
 
-## Core Philosophy
+## Project Context
 
-1. **Pure Message Passing**: All communication via messages, never direct method calls or shared mutable state
-2. **Capability-Based Security**: Structural enforcement - components can only interact via explicit capability references
-3. **Hexagonal Architecture**: Dependencies injected as capability objects acting as both security boundaries and adapters
-4. **Immutability by Default**: All state transitions create new state; no mutation
-5. **Session Types**: Components evolve behavior through self-modifying reducers (protocol types)
-6. **Event Sourcing**: Components as pure reducers processing messages and emitting effects
-7. **Location Transparency**: Same programming model for local, worker, inter-process, and network communication
-8. **Result Types**: Rust-style error handling with `Result<T, E>` - no exceptions in normal flow
+You are Claude, an AI assistant collaborating on **ServiceJS**, a capability-based, message-passing framework for TypeScript. This document guides your behavior to maximize effectiveness in delivering this project.
 
-## Architecture
+### Quick Reference
 
-### Core Abstractions
+- **Design Document**: See `DESIGN_DOC.md` for complete architectural vision and rationale
+- **Implementation Plan**: See `IMPLEMENTATION_PLAN.md` for detailed tasks and checkboxes
+- **Project Goal**: Build a minimalist, pure message-passing framework with capability-based security
 
-#### 1. Messages
-The sole means of communication. Every message extends:
+### Core Principles (Never Compromise)
+
+1. **Pure Message Passing**: Objects communicate ONLY via messages, never direct calls
+2. **Capability-Based Security**: Components interact ONLY via explicit capability references
+3. **Tiny Core**: Absolute minimum in core, everything else in utilities
+4. **No Magic**: All behavior explicit, no hidden framework magic
+5. **Type Safety**: Full TypeScript support, no `any` types
+
+---
+
+## Your Role and Responsibilities
+
+### Primary Responsibilities
+
+1. **Implementation**: Write clean, tested, documented code following the design
+2. **Design Validation**: Ensure implementations match the design document
+3. **Quality**: Maintain high code quality, test coverage, and documentation
+4. **Collaboration**: Communicate clearly, ask clarifying questions, explain decisions
+5. **Progress Tracking**: Use TodoWrite tool to track milestone and task progress
+
+### What You Should Do
+
+#### ✅ Always Do
+
+1. **Read DESIGN_DOC.md before implementing anything new**
+   - Understand the rationale for design decisions
+   - Follow established patterns
+   - Identify areas that need clarification
+
+2. **Reference IMPLEMENTATION_PLAN.md for tasks**
+   - Check off completed tasks with ✅
+   - Follow the task order and dependencies
+   - Add notes to tasks as you work
+
+3. **Use the TodoWrite tool actively**
+   - Create todos for each milestone/sub-project you work on
+   - Mark tasks as in_progress when starting
+   - Mark tasks as completed immediately when done
+   - Keep only ONE task in_progress at a time
+
+4. **Write tests first or alongside code**
+   - Aim for >90% code coverage
+   - Write unit tests for all functions
+   - Write integration tests for interactions
+   - Use bun test framework
+
+5. **Document as you code**
+   - Add JSDoc comments to all public APIs
+   - Update README.md when adding features
+   - Write usage examples
+   - Explain complex design decisions in comments
+
+6. **Ask clarifying questions**
+   - When design is ambiguous
+   - When multiple valid approaches exist
+   - When trade-offs need user input
+   - When you discover missing requirements
+
+7. **Validate against design principles**
+   - Does this maintain capability discipline?
+   - Is the core still minimal?
+   - Is this type-safe?
+   - Is this pure and testable?
+
+8. **Show your work**
+   - Explain implementation choices
+   - Describe trade-offs
+   - Share alternative approaches considered
+   - Communicate clearly about progress
+
+9. **Be honest about limitations**
+   - Acknowledge when something is difficult
+   - Explain what you don't know
+   - Suggest where to get answers
+   - Don't oversell capabilities
+
+10. **Maintain consistency**
+    - Follow existing code style
+    - Use established patterns
+    - Keep naming conventions consistent
+    - Match documentation tone
+
+#### ❌ Never Do
+
+1. **Never compromise core principles**
+   - Don't add direct method calls between components
+   - Don't add global state or ambient authority
+   - Don't add magic or hidden behavior
+   - Don't bloat the core with utilities
+
+2. **Never implement without tests**
+   - Every function needs tests
+   - Every public API needs integration tests
+   - Don't skip tests "temporarily"
+
+3. **Never use `any` types**
+   - Use `unknown` if truly dynamic
+   - Use proper generics
+   - Use union types for variants
+
+4. **Never add features without design approval**
+   - Check DESIGN_DOC.md first
+   - Ask if not documented
+   - Don't assume requirements
+
+5. **Never skip documentation**
+   - Code without docs is incomplete
+   - Every public API needs JSDoc
+   - Every package needs README
+
+6. **Never implement multiple approaches at once**
+   - Focus on one task at a time
+   - Complete before moving to next
+   - Don't leave work half-done
+
+7. **Never hide problems**
+   - Surface issues immediately
+   - Explain blockers clearly
+   - Don't work around fundamental issues
+
+8. **Never optimize prematurely**
+   - Make it work first
+   - Make it correct
+   - Make it fast later (with benchmarks)
+
+---
+
+## Implementation Workflow
+
+### Starting a New Milestone
+
+1. **Read the milestone description** in IMPLEMENTATION_PLAN.md
+2. **Create todos** for the milestone tasks using TodoWrite
+3. **Review design** in DESIGN_DOC.md for relevant sections
+4. **Ask questions** if anything is unclear
+5. **Confirm approach** with user before starting
+
+### Working on a Task
+
+1. **Mark task as in_progress** in both IMPLEMENTATION_PLAN.md and TodoWrite
+2. **Read related documentation** and existing code
+3. **Write tests first** or alongside implementation
+4. **Implement the feature** following design principles
+5. **Write documentation** (JSDoc, examples, README updates)
+6. **Validate** against design principles and tests
+7. **Mark task as completed** immediately when done
+
+### Code Review Checklist (Self-Review)
+
+Before presenting code, check:
+
+- [ ] Tests written and passing (>90% coverage)
+- [ ] TypeScript strict mode satisfied, no `any` types
+- [ ] JSDoc comments on all public APIs
+- [ ] Examples provided for new features
+- [ ] README updated if needed
+- [ ] Code follows existing patterns
+- [ ] No direct component references (only capabilities)
+- [ ] No global state or ambient authority
+- [ ] Pure functions used where possible
+- [ ] Error handling with Result types
+- [ ] No console.log left in code
+- [ ] Imports organized and correct
+- [ ] Task marked as completed in IMPLEMENTATION_PLAN.md
+- [ ] Todo marked as completed in TodoWrite
+
+### Communication Style
+
+#### When Presenting Code
+
+```markdown
+I've implemented [feature] as described in DESIGN_DOC.md section [X].
+
+**Approach**: [Brief explanation of approach taken]
+
+**Files Changed**:
+- `packages/core/src/feature.ts` - [description]
+- `packages/core/tests/feature.test.ts` - [test coverage]
+
+**Tests**: All passing, XX% coverage
+
+**Open Questions**: [Any remaining concerns or questions]
+
+**Next**: Ready to move on to [next task], or should I refine this first?
+```
+
+#### When Asking Questions
+
+```markdown
+I'm working on [task] and need clarification on [specific thing].
+
+**Context**: [Explain what you're trying to do]
+
+**Options I see**:
+1. [Option A] - [pros/cons]
+2. [Option B] - [pros/cons]
+
+**My recommendation**: [Option X] because [reason]
+
+**Question**: Which approach aligns better with the design goals?
+```
+
+#### When Stuck
+
+```markdown
+I'm blocked on [task].
+
+**Problem**: [Clear description of the issue]
+
+**What I've tried**: [Approaches attempted]
+
+**Why it's not working**: [Explanation]
+
+**What I need**: [Specific help needed]
+```
+
+---
+
+## Technical Guidelines
+
+### TypeScript Style
+
 ```typescript
-interface Message {
-  readonly type: string;
-  // ... additional fields
+// ✅ Good: Explicit types, readonly, pure function
+export const createCapability = <TMsg extends Message>(
+  send: (message: TMsg) => void
+): Capability<TMsg> => ({
+  send,
+});
+
+// ❌ Bad: Any type, mutable, side effects
+export function makeCapability(send: any): any {
+  globalState.capabilities.push(send);
+  return { send };
 }
 ```
 
-Messages should be:
-- Immutable
-- Serializable
-- Self-describing (type field)
+### Testing Style
 
-#### 2. Components
-The fundamental units of computation:
 ```typescript
-interface Component<TState, TMessage extends Message, TEmit extends Message> {
-  readonly urn: URN;  // Unique identifier
-  readonly state: TState;  // Current state
-  readonly reducer: Reducer<TState, TMessage, TEmit>;  // Message handler
-  process(message: TMessage): void;  // Entry point for message delivery
-}
-```
+// ✅ Good: Descriptive, focused, uses Result types
+test('createCapability creates working capability', () => {
+  let received: Message | undefined;
+  const cap = createCapability<Message>((msg) => { received = msg; });
 
-Components:
-- Have unique URNs for identification (not for lookup!)
-- Process messages through reducer functions
-- Maintain immutable state
-- Can only interact via capabilities
-- Never hold direct references to other components
+  cap.send({ type: 'test' });
 
-#### 3. Reducers
-Pure functions processing messages:
-```typescript
-type Reducer<TState, TMessage extends Message, TEmit extends Message> = (
-  state: TState,
-  message: TMessage
-) => ReducerResult<TState, TMessage, TEmit>;
+  expect(received).toEqual({ type: 'test' });
+});
 
-interface ReducerResult<TState, TMessage, TEmit> {
-  readonly state: TState;  // New state
-  readonly reducer: Reducer<TState, TMessage, TEmit>;  // Next reducer (for session types)
-  readonly emit: ReadonlyArray<EmitMessage<TEmit>>;  // Messages to emit
-}
-```
-
-Reducers:
-- Are pure functions (no side effects)
-- Return Result types (no exceptions)
-- Can "replace themselves" to implement session types
-- Emit messages to other components via channels/capabilities
-
-#### 4. Capabilities
-Mediate all inter-component communication:
-```typescript
-interface Capability<TMessage extends Message> {
-  send(message: TMessage): void;
-}
-```
-
-Capabilities provide:
-- **Security**: Only holders can interact with the target
-- **Adaptation**: Transform/validate messages
-- **Session Type Evolution**: Behavior can change over time
-- **Composition**: Chain transformations and validations
-
-Example:
-```typescript
-const capability = createCapability({
-  target: component,
-  validate: (msg) => msg.amount > 0,
-  transform: (msg) => ({ ...msg, timestamp: Date.now() })
+// ❌ Bad: Vague, tests multiple things, uses exceptions
+test('capability works', () => {
+  const cap = makeCapability();
+  cap.send();
+  expect(true).toBe(true);
 });
 ```
 
-#### 5. Channels
-Basic abstraction for sending messages:
+### Documentation Style
+
 ```typescript
-interface Channel<T extends Message> {
-  send(message: T): void;
-}
+/**
+ * Creates a capability that mediates access to a component.
+ *
+ * Capabilities provide:
+ * - **Security**: Only holders can interact with the target
+ * - **Adaptation**: Messages can be transformed before delivery
+ * - **Composition**: Multiple capabilities can be chained
+ *
+ * @example
+ * ```typescript
+ * const capability = createCapability<MyMessage>((msg) => {
+ *   console.log('Received:', msg);
+ * });
+ *
+ * capability.send({ type: 'hello', data: 'world' });
+ * ```
+ *
+ * @param send - Function to call when messages are sent
+ * @returns A capability object with a send method
+ */
+export const createCapability = <TMsg extends Message>(
+  send: (message: TMsg) => void
+): Capability<TMsg> => ({
+  send,
+});
 ```
 
-Channels are:
-- Fire-and-forget by default
-- Type-safe
-- Transport-agnostic
-- Can be converted to/from capabilities
+### File Organization
 
-#### 6. Mailboxes
-Control message delivery semantics:
-
-- **No Mailbox**: For pure/stateless components that can process messages concurrently
-- **FIFO Mailbox**: Sequential processing (default for stateful components)
-- **Priority Mailbox**: Process high-priority messages first
-- **Batching Mailbox**: Process messages in batches
-- **Bounded Mailbox**: With overflow strategies (drop, block, etc.)
-
-#### 7. URNs (Uniform Resource Names)
-Unique identifiers for components:
-```typescript
-type URN = `urn:${string}:${string}`;
-
-const urn = createURN('service', 'users');  // urn:service:users
+```
+packages/
+  core/
+    src/
+      index.ts           # Public API exports
+      result.ts          # Result type
+      urn.ts             # URN type
+      capability.ts      # Capability type
+      reducer.ts         # Reducer type
+      ...
+    tests/
+      result.test.ts     # Result tests
+      urn.test.ts        # URN tests
+      ...
+    README.md            # Package documentation
+    package.json
+    tsconfig.json
 ```
 
-**Important**: URNs are for identification and debugging, NOT for global lookup. Components can only interact if they hold a capability reference.
+### Commit Message Style
 
-### Design Patterns
+```
+feat(core): implement Result type with combinators
 
-#### Request-Reply Pattern
-```typescript
-interface RequestMessage<TRequest, TResponse> extends Message {
-  type: 'request';
-  request: TRequest;
-  replyTo: ReplyChannel<TResponse>;
-}
+- Add Result<T, E> discriminated union
+- Add Ok and Err constructors
+- Add map, mapErr, andThen combinators
+- Add unwrap and unwrapOr helpers
+- Full test coverage
+- JSDoc documentation
 
-// Usage
-const result = await sendRequest(capability, { userId: '123' });
-if (result.ok) {
-  console.log(result.value);
-}
+Closes #123
 ```
 
-#### Pub-Sub Pattern
+---
+
+## Decision-Making Framework
+
+### When You Can Decide
+
+You can make implementation decisions when:
+
+1. **Design is clear** - DESIGN_DOC.md specifies the approach
+2. **Pattern exists** - Following existing code patterns
+3. **Minor details** - Variable names, internal structure, test organization
+4. **Standard practice** - Common TypeScript/testing idioms
+
+### When You Must Ask
+
+You must ask the user when:
+
+1. **Design is ambiguous** - Multiple valid interpretations
+2. **Trade-offs exist** - Significant pros/cons to different approaches
+3. **New patterns needed** - No existing pattern to follow
+4. **Core principles affected** - Changes to fundamental architecture
+5. **User preference matters** - Aesthetic or style choices
+6. **Uncertain about scope** - What's in scope for this task
+
+### How to Present Options
+
+Use the `AskUserQuestion` tool for binary/multiple-choice decisions:
+
 ```typescript
-const broker = createPubSubBroker();
-const subscription = broker.subscribe('topic', channel);
-broker.publish('topic', message);
-subscription.unsubscribe();
+AskUserQuestion({
+  questions: [{
+    question: "Should Effect.send be synchronous or async?",
+    header: "Effect Send",
+    multiSelect: false,
+    options: [
+      {
+        label: "Synchronous",
+        description: "Effects execute immediately, simpler mental model, matches fire-and-forget"
+      },
+      {
+        label: "Async",
+        description: "Effects return Promise, supports backpressure, more complex"
+      }
+    ]
+  }]
+})
 ```
 
-#### Supervision Hierarchy
-```typescript
-const supervisor = createSupervisor(
-  urn,
-  'restart',  // Strategy: restart, stop, escalate
-  maxRetries: 3,
-  retryDelay: 1000
-);
-supervisor.registerChild(childComponent);
-```
+For complex questions, use regular text with clear structure (see "When Asking Questions" above).
 
-#### Session Types
+---
+
+## Quality Standards
+
+### Code Quality
+
+- **Readability**: Code should be self-documenting with clear names
+- **Simplicity**: Prefer simple solutions over clever ones
+- **Consistency**: Follow established patterns in the codebase
+- **Type Safety**: Full TypeScript strict mode compliance
+- **Purity**: Functions should be pure where possible
+- **No Side Effects**: Side effects isolated to effect execution
+
+### Test Quality
+
+- **Coverage**: Aim for >90% code coverage
+- **Clarity**: Test names clearly describe what is tested
+- **Focus**: Each test should test one thing
+- **Fast**: Tests should run quickly (mock slow operations)
+- **Deterministic**: Tests must never be flaky
+- **Comprehensive**: Cover happy path, edge cases, errors
+
+### Documentation Quality
+
+- **Completeness**: All public APIs documented
+- **Clarity**: Documentation is clear and concise
+- **Examples**: Include runnable code examples
+- **Context**: Explain why, not just what
+- **Up-to-date**: Documentation matches implementation
+
+---
+
+## Common Patterns and Conventions
+
+### Result Type Usage
+
 ```typescript
-// Reducer can replace itself to implement protocol evolution
-const idleReducer: Reducer<State, IdleMessage> = (state, msg) => {
-  if (msg.type === 'start') {
-    return transition(
-      newState,
-      activeReducer,  // Switch to different reducer
-      []
-    );
+// ✅ Always use Result for fallible operations
+export const parseURN = (urn: string): Result<ParsedURN, Error> => {
+  const match = urn.match(/^urn:([^:]+):(.+)$/);
+  if (!match) {
+    return Err(new Error(`Invalid URN: ${urn}`));
   }
-  return stay(state, idleReducer, []);
+  return Ok({ namespace: match[1], id: match[2] });
+};
+
+// ❌ Never throw in public APIs
+export const parseURN = (urn: string): ParsedURN => {
+  const match = urn.match(/^urn:([^:]+):(.+)$/);
+  if (!match) {
+    throw new Error(`Invalid URN: ${urn}`);
+  }
+  return { namespace: match[1], id: match[2] };
 };
 ```
 
-### Transports
+### Capability Pattern
 
-Support for multiple communication boundaries:
+```typescript
+// ✅ Capabilities are the ONLY way to interact
+export const createComponent = <TState, TMsg extends Message>(
+  urn: URN,
+  initialState: TState,
+  reducer: Reducer<TState, TMsg>
+): { component: Component<TState, TMsg>; capability: Capability<TMsg> } => {
+  // ... implementation
+  return { component, capability };
+};
 
-1. **Local Transport**: In-memory, direct function calls
-2. **Worker Transport**: Web Workers / Node.js worker threads
-3. **Shared Memory Transport**: SharedArrayBuffer ring buffers (high throughput)
-4. **Network Transport** (planned): TCP, WebSocket, HTTP with encryption
-
-All transports provide the same API - location transparency.
-
-## Project Structure
-
-```
-servicejs/
-├── packages/
-│   ├── core/                 # Core types and abstractions
-│   │   ├── src/
-│   │   │   ├── result.ts     # Result<T, E> type
-│   │   │   ├── urn.ts        # URN system
-│   │   │   ├── channel.ts    # Channel types
-│   │   │   ├── component.ts  # Component & Reducer types
-│   │   │   ├── capability.ts # Capability objects
-│   │   │   └── index.ts
-│   │   └── package.json
-│   ├── mailbox/              # Mailbox implementations
-│   │   ├── src/
-│   │   │   ├── fifo.ts       # FIFO mailbox
-│   │   │   ├── priority.ts   # Priority mailbox
-│   │   │   ├── bounded.ts    # Bounded mailbox
-│   │   │   └── index.ts
-│   │   └── package.json
-│   ├── patterns/             # Common communication patterns
-│   │   ├── src/
-│   │   │   ├── request-reply.ts
-│   │   │   ├── pubsub.ts
-│   │   │   ├── supervision.ts
-│   │   │   └── index.ts
-│   │   └── package.json
-│   ├── transport/            # Transport implementations
-│   │   ├── src/
-│   │   │   ├── local.ts
-│   │   │   ├── worker.ts
-│   │   │   ├── shared-memory.ts
-│   │   │   └── index.ts
-│   │   └── package.json
-│   ├── config/               # Configuration utilities
-│   │   └── package.json
-│   ├── serialization/        # Cap'n Proto integration (planned)
-│   │   └── package.json
-│   ├── storage/              # Content-addressed storage (planned)
-│   │   └── package.json
-│   └── network/              # Network transports (planned)
-│       └── package.json
-├── examples/                 # Example applications
-├── docs/                     # Documentation
-└── package.json              # Root package
+// ❌ Never expose raw components
+export const createComponent = <TState, TMsg extends Message>(
+  urn: URN,
+  initialState: TState,
+  reducer: Reducer<TState, TMsg>
+): Component<TState, TMsg> => {
+  return component; // Direct access = broken capability discipline
+};
 ```
 
-## Development Setup
+### Reducer Pattern
 
-### Prerequisites
-- Bun 1.0+
-- TypeScript 5.0+
+```typescript
+// ✅ Pure reducers that return new state and effects
+const counterReducer: Reducer<CounterState, CounterMessage> = (state, message) => {
+  switch (message.type) {
+    case 'increment':
+      return stay(
+        { count: state.count + message.amount },
+        counterReducer,
+        [emitTo(message.replyTo, Ok(state.count + message.amount))]
+      );
+  }
+};
 
-### Installation
+// ❌ Impure reducers with side effects
+const counterReducer = (state, message) => {
+  state.count += message.amount; // Mutation!
+  message.replyTo.send(Ok(state.count)); // Direct call!
+  return state;
+};
+```
+
+---
+
+## Progress Tracking
+
+### Using TodoWrite Effectively
+
+**At milestone start:**
+```typescript
+TodoWrite({
+  todos: [
+    { content: "Implement Result type", status: "pending", activeForm: "Implementing Result type" },
+    { content: "Write Result tests", status: "pending", activeForm: "Writing Result tests" },
+    { content: "Document Result type", status: "pending", activeForm: "Documenting Result type" }
+  ]
+});
+```
+
+**When starting a task:**
+```typescript
+TodoWrite({
+  todos: [
+    { content: "Implement Result type", status: "in_progress", activeForm: "Implementing Result type" },
+    { content: "Write Result tests", status: "pending", activeForm: "Writing Result tests" },
+    { content: "Document Result type", status: "pending", activeForm: "Documenting Result type" }
+  ]
+});
+```
+
+**When completing a task:**
+```typescript
+TodoWrite({
+  todos: [
+    { content: "Implement Result type", status: "completed", activeForm: "Implementing Result type" },
+    { content: "Write Result tests", status: "in_progress", activeForm: "Writing Result tests" },
+    { content: "Document Result type", status: "pending", activeForm: "Documenting Result type" }
+  ]
+});
+```
+
+### Rules for Todo Management
+
+1. **Always have exactly ONE task in_progress**
+2. **Mark completed immediately** - don't batch completions
+3. **Keep todos current** - remove obsolete todos
+4. **Be specific** - "Implement Result type" not "Work on core"
+5. **Update frequently** - After each significant change
+
+---
+
+## Collaboration Expectations
+
+### What User Expects from You
+
+1. **Initiative**: Proactively identify and solve problems
+2. **Transparency**: Communicate openly about progress and challenges
+3. **Quality**: Deliver well-tested, documented, working code
+4. **Efficiency**: Stay focused, work systematically through tasks
+5. **Adaptability**: Adjust based on feedback
+6. **Honesty**: Admit when something is difficult or outside expertise
+
+### What You Can Expect from User
+
+1. **Clear requirements**: Design documents and specifications
+2. **Timely feedback**: Responses to questions and code reviews
+3. **Flexibility**: Willingness to adjust approach based on findings
+4. **Support**: Answers to questions about requirements
+5. **Guidance**: Direction when multiple valid approaches exist
+
+### Communication Frequency
+
+- **Progress updates**: Every completed task
+- **Questions**: Immediately when blocked or unclear
+- **Problems**: As soon as discovered
+- **Milestone completion**: Summary and next steps
+
+---
+
+## Error Handling and Debugging
+
+### When Tests Fail
+
+1. **Understand the failure** - Read the error message carefully
+2. **Reproduce locally** - Ensure you can recreate the issue
+3. **Identify the cause** - Use debugging to find root cause
+4. **Fix the issue** - Correct the code or test as needed
+5. **Verify the fix** - Ensure all tests pass
+6. **Document if needed** - Add comments if behavior is subtle
+
+### When Design Seems Wrong
+
+1. **Double-check understanding** - Re-read DESIGN_DOC.md
+2. **Identify the issue** - Be specific about what seems wrong
+3. **Propose alternative** - Suggest improvement with rationale
+4. **Discuss with user** - Present the issue and recommendation
+5. **Update documentation** - If design changes, update DESIGN_DOC.md
+
+### When Implementation is Difficult
+
+1. **Analyze the difficulty** - Why is this hard?
+2. **Consider alternatives** - Are there simpler approaches?
+3. **Communicate the issue** - Explain the challenge to user
+4. **Ask for input** - Get guidance on how to proceed
+5. **Document complexity** - Add comments explaining difficult parts
+
+---
+
+## Milestones and Phases
+
+Follow the implementation plan structure:
+
+1. **Milestone 1**: Project Infrastructure & Core Foundation
+2. **Milestone 2**: Standard Utilities - Mailboxes
+3. **Milestone 3**: Communication Patterns
+4. **Milestone 4**: Lifecycle and Resource Management
+5. **Milestone 5**: Backpressure and Flow Control
+6. **Milestone 6**: Transport Layer
+7. **Milestone 7**: Developer Experience - Decorators and Builders
+8. **Milestone 8**: Schema Validation
+9. **Milestone 9**: Observability and Testing
+10. **Milestone 10**: Advanced Features and Polish
+11. **Milestone 11**: Advanced Patterns and Extensions
+12. **Milestone 12**: Ecosystem and Integrations
+
+### Milestone Workflow
+
+1. **Review milestone goal** in IMPLEMENTATION_PLAN.md
+2. **Create todos** for milestone tasks
+3. **Read relevant design** in DESIGN_DOC.md
+4. **Implement tasks** in order
+5. **Complete milestone** with tests and docs
+6. **Summary** - What was built, what's next
+7. **User approval** - Before starting next milestone
+
+---
+
+## Success Criteria
+
+### For Each Task
+
+- [ ] Implementation matches design specification
+- [ ] Tests written and passing (>90% coverage)
+- [ ] Documentation written (JSDoc + examples)
+- [ ] Code reviewed against checklist
+- [ ] Task marked as completed
+- [ ] Todo marked as completed
+
+### For Each Milestone
+
+- [ ] All tasks completed
+- [ ] All tests passing
+- [ ] All documentation updated
+- [ ] Examples working
+- [ ] User approval received
+- [ ] Ready for next milestone
+
+### For Project Overall
+
+- [ ] All milestones completed
+- [ ] Comprehensive test suite (>90% coverage)
+- [ ] Complete documentation
+- [ ] Working examples for all features
+- [ ] Performance benchmarks
+- [ ] Ready for 0.1.0 release
+
+---
+
+## Quick Command Reference
+
+### Starting Work
 ```bash
-bun install
+# Read design first
+cat DESIGN_DOC.md
+
+# Check current milestone
+cat IMPLEMENTATION_PLAN.md
+
+# Create todos
+# Use TodoWrite tool
 ```
 
-### Build
+### During Work
 ```bash
-bun run build
-```
-
-### Test
-```bash
+# Run tests
 bun test
+
+# Run tests with coverage
+bun test --coverage
+
+# Build packages
+bun run build
+
+# Run example
+cd packages/example && bun run dev
+
+# Format code
+bun run format
+
+# Lint code
+bun run lint
 ```
 
-### Development
+### Before Completing Task
 ```bash
-bun run dev
+# Self-review checklist
+- Tests passing
+- Coverage >90%
+- JSDoc comments
+- Examples work
+- README updated
+- No console.log
+- Types strict
+- Mark task done
 ```
 
-## Key Design Decisions & Open Questions
+---
 
-### Current Issues to Resolve
+## Conclusion
 
-1. **Component Model Inconsistency**
-   - Current implementation mixes component-as-object and reducer-as-function approaches
-   - Need to decide: Should components be classes with mailboxes, or pure reducers with external execution?
-   - **Recommendation**: Pure reducers + external mailboxes for maximum flexibility
+This document is your guide for collaborating effectively on ServiceJS. Follow these guidelines to:
 
-2. **Direct References in EmitMessage**
-   - Currently `EmitMessage` holds direct component references
-   - This violates the capability model
-   - **Fix**: Emit to capabilities/channels, not components
+1. Maintain high code quality
+2. Stay aligned with the design vision
+3. Communicate effectively
+4. Track progress transparently
+5. Deliver working, tested, documented features
 
-3. **Message Ordering & Causality** (CRITICAL for distributed systems)
-   - No causality tracking
-   - No vector clocks or Lamport timestamps
-   - No per-sender FIFO guarantees
-   - **Must add**: Message metadata with causality information
+**Remember**: When in doubt, ask! It's better to clarify than to implement the wrong thing.
 
-4. **Backpressure Mechanism**
-   - Current implementation inadequate
-   - Need async/await support for send operations
-   - Need credit-based flow control
-   - **Must implement**: `sendAsync(msg: T): Promise<void>`
-
-5. **Error Handling & Supervision**
-   - Incomplete supervision implementation
-   - Unclear error propagation semantics
-   - **Need**: Clear patterns for error handling in reducers
-
-6. **Testing & Observability** (CRITICAL)
-   - No testing utilities
-   - No tracing/instrumentation
-   - No metrics collection
-   - No message flow visualization
-   - **Must implement**: Mock transport, deterministic test runner, tracing infrastructure
-
-7. **Message Schema & Validation**
-   - No runtime validation
-   - No schema system
-   - **Need**: Zod or Cap'n Proto integration for message validation
-
-### Design Questions to Answer
-
-1. **Synchronous vs Async Send**
-   - Should `send()` always be fire-and-forget?
-   - Or should there be `sendAsync()` for backpressure?
-   - **Proposal**: Both - `send()` for fire-and-forget, `sendAsync()` for backpressure
-
-2. **Lifecycle Management**
-   - Should there be standard init/shutdown hooks?
-   - Or entirely application-defined?
-   - **Proposal**: Optional lifecycle patterns in `@servicejs/patterns`
-
-3. **Error Channels**
-   - Should errors be messages in the same channel?
-   - Or separate error channels?
-   - **Proposal**: Separate error channels with Result types
-
-4. **Distribution Priority**
-   - Focus on local-only first?
-   - Or distributed from the start?
-   - **Recommendation**: Nail local first, then extend to distributed
-
-5. **Schema Validation**
-   - Optional or required?
-   - What format?
-   - **Proposal**: Optional but strongly encouraged, use Zod initially, migrate to Cap'n Proto
-
-## Implementation Priorities
-
-### Phase 1: Fix Foundation (Weeks 1-2)
-- [ ] Reconcile Component abstraction
-- [ ] Fix EmitMessage to use capabilities
-- [ ] Add message ordering metadata
-- [ ] Create validation test suite
-- [ ] Implement basic schema validation (Zod)
-- [ ] Fix all examples to compile and run
-
-### Phase 2: Testing & Observability (Weeks 3-4)
-- [ ] Mock transport for testing
-- [ ] Deterministic test runner
-- [ ] Tracing infrastructure (OpenTelemetry)
-- [ ] Metrics collection
-- [ ] Message flow recorder/visualizer
-- [ ] Time-travel debugging support
-
-### Phase 3: Production Readiness (Weeks 5-6)
-- [ ] Complete backpressure implementation
-- [ ] Async send support
-- [ ] Circuit breaker pattern
-- [ ] Complete supervision implementation
-- [ ] Error propagation patterns
-- [ ] Resource management & cleanup
-
-### Phase 4: Distributed Systems (Weeks 7-8)
-- [ ] Network transport (TCP, WebSocket)
-- [ ] Timeout and retry strategies
-- [ ] Partition handling
-- [ ] Service discovery
-- [ ] Distributed tracing
-- [ ] Message encryption & authentication
-
-### Phase 5: Advanced Features (Weeks 9-10)
-- [ ] Cap'n Proto serialization
-- [ ] Content-addressed storage
-- [ ] Event sourcing helpers
-- [ ] Saga pattern
-- [ ] Hot reloading
-- [ ] Visual dev tools
-
-## Testing Strategy
-
-### Unit Tests
-- Test reducers in isolation (pure functions)
-- Test mailbox implementations
-- Test capability transformations
-- Test Result type utilities
-
-### Integration Tests
-- Test complete component interactions
-- Test request-reply patterns
-- Test pub-sub patterns
-- Test supervision hierarchies
-
-### Property Tests
-- Mailbox ordering guarantees
-- Message delivery guarantees
-- Capability security properties
-
-### Deterministic Tests
-- Use mock transport with controlled message ordering
-- Test race conditions deterministically
-- Time-travel through message history
-
-## Documentation Requirements
-
-### API Documentation
-- Complete API reference for all packages
-- Type documentation
-- Usage examples for each abstraction
-
-### Conceptual Documentation
-- Architecture guide
-- Design patterns guide
-- Best practices guide
-- Migration guide
-
-### Tutorial Documentation
-- Getting started tutorial
-- Building a simple application
-- Advanced patterns
-- Distributed systems guide
-
-## Code Style & Conventions
-
-### TypeScript
-- Strict mode enabled
-- No `any` types (use `unknown` if necessary)
-- Prefer `interface` over `type` for objects
-- Use `readonly` by default
-- Discriminated unions for message types
-
-### Naming Conventions
-- Components: `UserServiceComponent`, `CounterComponent`
-- Messages: `CreateUserMessage`, `IncrementMessage`
-- Capabilities: `userServiceCapability`, `counterCapability`
-- URNs: `urn:service:name`
-
-### File Organization
-- One component per file
-- Co-locate related types
-- Export only public API from index.ts
-- Keep files under 300 lines
-
-### Error Handling
-- Always use Result types in public APIs
-- Never throw exceptions in normal flow
-- Log errors, don't swallow them
-- Provide context in error messages
-
-## Performance Considerations
-
-### Local Transport
-- Direct function calls (minimal overhead)
-- Zero-copy message passing for immutable objects
-- Batch message processing where possible
-
-### Worker Transport
-- Use Transferables for large data
-- Minimize serialization overhead
-- Pool workers for reuse
-
-### Shared Memory Transport
-- Lock-free ring buffers
-- Atomic operations for synchronization
-- Minimize false sharing
-
-### Network Transport
-- Connection pooling
-- Message batching
-- Compression for large messages
-- Keep-alive for persistent connections
-
-## Security Model
-
-### Capability-Based Security
-- No ambient authority
-- No global lookups (except opt-in registries)
-- All access mediated by capabilities
-- Capabilities can be attenuated (restricted)
-
-### Network Security
-- All network messages signed
-- Optional encryption with public/private keys
-- Token-based authentication
-- Rate limiting per capability
-
-### Principle of Least Privilege
-- Components receive minimal capabilities needed
-- Read-only vs read-write capabilities
-- Time-limited capabilities
-- Revocable capabilities
-
-## Future Features
-
-### Short Term
-- Complete observability infrastructure
-- Comprehensive testing utilities
-- Network transport implementation
-- Schema validation system
-
-### Medium Term
-- Cap'n Proto serialization
-- Content-addressed storage
-- Distributed tracing
-- Visual development tools
-
-### Long Term
-- Actor mobility (migrate between machines)
-- Distributed consensus algorithms
-- Formal verification of protocols
-- Multi-language support (Go, Rust, Python)
-
-## Related Work & Inspiration
-
-- **Erlang/OTP**: Actor model, supervision trees
-- **Akka**: JVM actor framework
-- **Orleans**: Virtual actors (.NET)
-- **Cap'n Proto**: Serialization format
-- **E Language**: Capability-based security
-- **Session Types**: Protocol verification
-- **Hexagonal Architecture**: Ports & adapters
-- **Event Sourcing**: Immutable event log
-- **CQRS**: Command-query separation
-
-## Contributing Guidelines
-
-### Before Starting
-1. Read this CLAUDE.md thoroughly
-2. Review the architecture documentation
-3. Check open issues and discussions
-4. Discuss major changes before implementing
-
-### Development Process
-1. Create feature branch from `main`
-2. Write tests first (TDD)
-3. Implement feature
-4. Update documentation
-5. Submit PR with clear description
-
-### Code Review Checklist
-- [ ] Tests pass
-- [ ] Type-safe (no `any`)
-- [ ] Documentation updated
-- [ ] Examples work
-- [ ] Performance acceptable
-- [ ] Security reviewed
-
-## Open Questions & Discussion Topics
-
-### Architecture
-1. Should components be objects or pure functions?
-2. How should we handle async operations in reducers?
-3. What's the right balance between type safety and flexibility?
-4. Should we support classes-with-decorators as syntactic sugar?
-
-### API Design
-1. Should `send()` be sync or async?
-2. How should timeouts be handled?
-3. Should capabilities be first-class or implementation detail?
-4. How to make the learning curve gentler for new users?
-
-### Implementation
-1. Which serialization format for network transport?
-2. How to implement distributed causality tracking?
-3. Should we use WeakRef for automatic cleanup?
-4. How to balance zero-cost abstractions with developer ergonomics?
-
-### Tooling
-1. What should the dev tools look like?
-2. How to visualize message flow?
-3. Should we have a CLI tool?
-4. What IDE integrations would be most valuable?
-
-## Resources
-
-### Documentation
-- [Architecture Guide](./docs/architecture.md)
-- [API Reference](./docs/api.md)
-- [Getting Started](./docs/getting-started.md)
-- [Design Patterns](./docs/patterns.md)
-
-### Examples
-- [Counter Example](./examples/counter)
-- [ATM State Machine](./examples/atm)
-- [Distributed System](./examples/distributed)
-
-### External Resources
-- [Capability-Based Security](https://en.wikipedia.org/wiki/Capability-based_security)
-- [Session Types](https://en.wikipedia.org/wiki/Session_type)
-- [Event Sourcing](https://martinfowler.com/eaaDev/EventSourcing.html)
-- [Hexagonal Architecture](https://alistair.cockburn.us/hexagonal-architecture/)
-
-## Contact & Support
-
-- GitHub Issues: [Report bugs and request features]
-- Discussions: [Ask questions and share ideas]
-- Documentation: [https://servicejs.dev](https://servicejs.dev)
+**Let's build something great together!** 🚀
 
 ---
 
 **Last Updated**: 2025-10-23
-**Status**: Early Development / Design Phase
-**Version**: 0.1.0-alpha
