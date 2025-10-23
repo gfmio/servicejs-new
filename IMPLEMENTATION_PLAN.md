@@ -62,6 +62,11 @@ This document outlines the complete implementation plan for ServiceJS, organized
   - Notes: Run on PRs and main branch pushes
 
 - [ ] **Create package structure**
+  - Create `packages/hkt` directory (HKT foundation)
+  - Create `packages/result` directory (Result type utility)
+  - Create `packages/option` directory (Option type utility)
+  - Create `packages/either` directory (Either type utility)
+  - Create `packages/pure` directory (Pure function utilities)
   - Create `packages/core` directory
   - Create `packages/mailbox` directory
   - Create `packages/patterns` directory
@@ -90,30 +95,296 @@ This document outlines the complete implementation plan for ServiceJS, organized
   - Add README.md to each package
   - Notes: Use TypeDoc for API docs generation
 
-### 1.2 Core Types (@servicejs/core)
+---
 
-- [ ] **Implement Result type**
-  - Define `Result<T, E>` discriminated union
-  - Implement `Ok<T>` and `Err<E>` constructors
-  - Implement `isOk` and `isErr` type guards
-  - Implement `map` combinator
-  - Implement `mapErr` combinator
-  - Implement `andThen` (flatMap) combinator
-  - Implement `unwrap` helper
-  - Implement `unwrapOr` helper
-  - Implement `unwrapErr` helper
-  - Notes: Follow Rust's Result API closely
+## Milestone 0: HKT Foundation & Type Utilities
+
+**Goal:** Implement the Higher-Kinded Types foundation and basic type utilities that all other packages will build on.
+
+**Estimated Effort:** 4-6 days
+
+### 0.1 HKT Core (@servicejs/hkt)
+
+- [ ] **Implement HKTF namespace**
+  - Define `ArgsSymbol`, `DefaultsSymbol`, `ResultSymbol` unique symbols
+  - Define `HKTF.Base` interface
+  - Implement `HKTF.Args<F>` type to extract merged args
+  - Implement `HKTF.Result<F>` type to extract result
+  - Implement `HKTF.Apply<F, Input>` for applying type functions
+  - Implement `HKTF.PartialApply<F, NewDefaults>` for partial application
+  - Implement `HKTF.ToFunction<F>` to derive runtime function signature
+  - Notes: Pure type-level, zero runtime code
+
+- [ ] **Implement Method namespace**
+  - Define `Method.Base<Message, Result>` interface
+  - Implement `Method.MessageOf<M>` type to extract message type
+  - Notes: Methods are HKTFs specialized for message handling
+
+- [ ] **Implement HKTO namespace**
+  - Define `MethodsSymbol` unique symbol
+  - Define `HKTO.Base` interface extending HKTF.Base
+  - Implement `HKTO.Send<O, Message>` for message dispatch
+  - Implement `SendToMethods` helper for tuple recursion
+  - Implement `HKTO.Combine<Methods>` for composing methods into HKTO
+  - Implement `ExtractMessages<Methods>` to extract all message types
+  - Implement `HKTO.ToObject<O>` to derive runtime object type
+  - Implement `MethodsToObject` helper for converting method tuple to object methods
+  - Implement `MethodToObjectMethod` helper for single method conversion
+  - Implement `ExtractMethodName` to extract method name from message type field
+  - Notes: Core HKTO machinery, tuple-based composition
+
+- [ ] **Implement Protocol namespace**
+  - Implement `Protocol.ToReducer<O, State>` to convert HKTO to reducer signature
+  - Implement `Protocol.Implements<Protocol, Impl>` to verify implementation
+  - Notes: Bridge between HKTOs and ServiceJS reducers
+
+- [ ] **Write tests for HKT core**
+  - Test HKTF.Apply with various type functions
+  - Test HKTF.PartialApply with defaults
+  - Test HKTO.Send with message dispatch
+  - Test HKTO.Combine with method tuples
+  - Test HKTO.ToObject derives correct object type
+  - Test Protocol.ToReducer derives correct reducer signature
+  - Notes: Type-level tests using `tsd` or similar
+
+- [ ] **Write HKT documentation**
+  - Document HKTF concept and usage
+  - Document HKTO concept and usage
+  - Document Method pattern
+  - Document Protocol helpers
+  - Add examples (calculator, option, etc. from hkt.ts)
+  - Notes: Include visual diagrams of type flow
+
+- [ ] **Create HKT package exports**
+  - Export all HKTF types from index.ts
+  - Export all HKTO types from index.ts
+  - Export all Method types from index.ts
+  - Export all Protocol types from index.ts
+  - Add JSDoc comments to all exports
+  - Notes: Clean public API surface
+
+### 0.2 Result Type (@servicejs/result)
+
+- [ ] **Define Result HKT types**
+  - Define `OkMap<T>` method type
+  - Define `OkMapErr<T, E>` method type
+  - Define `OkAndThen<T>` method type
+  - Define `OkUnwrap<T>` method type
+  - Define `OkUnwrapOr<T>` method type
+  - Define `OkHKTO<T>` combining Ok methods
+  - Define `ErrMap<E>` method type
+  - Define `ErrMapErr<E>` method type
+  - Define `ErrAndThen<E>` method type
+  - Define `ErrUnwrap<E>` method type
+  - Define `ErrUnwrapOr<E>` method type
+  - Define `ErrHKTO<E>` combining Err methods
+  - Define `ResultHKTO<T, E>` as union
+  - Define `Ok` HKTF constructor type
+  - Define `Err` HKTF constructor type
+  - Notes: Complete type-level Result definition
+
+- [ ] **Implement Result runtime**
+  - Derive `Result<T, E>` type from `ResultHKTO<T, E>` using HKTO.ToObject
+  - Derive `OkFunction` type from `Ok` HKTF using ToFunction
+  - Derive `ErrFunction` type from `Err` HKTF using ToFunction
+  - Implement `Ok` constructor matching OkFunction
+  - Implement `Err` constructor matching ErrFunction
+  - Implement `map` helper function
+  - Implement `mapErr` helper function
+  - Implement `andThen` helper function
+  - Implement `unwrap` helper function
+  - Implement `unwrapOr` helper function
+  - Implement `isOk` type guard
+  - Implement `isErr` type guard
+  - Notes: Runtime matches type-level exactly
 
 - [ ] **Write tests for Result type**
-  - Test Ok construction and type narrowing
-  - Test Err construction and type narrowing
+  - Test Ok construction and methods
+  - Test Err construction and methods
   - Test map with Ok and Err
   - Test mapErr with Ok and Err
   - Test andThen chaining
   - Test unwrap success and failure
-  - Test unwrapOr with default values
-  - Property tests for combinator laws
-  - Notes: Use bun test, aim for 100% coverage
+  - Test unwrapOr with defaults
+  - Test isOk and isErr type guards
+  - Test type inference throughout
+  - Notes: Aim for 100% coverage
+
+- [ ] **Write Result documentation**
+  - Document Result type and philosophy
+  - Document each method with examples
+  - Document type guards
+  - Document when to use Result vs Option vs Either
+  - Add comparison to other error handling approaches
+  - Notes: Reference Rust's Result for familiarity
+
+### 0.3 Option Type (@servicejs/option)
+
+- [ ] **Define Option HKT types**
+  - Define `SomeMap<T>` method type
+  - Define `SomeFlatMap<T>` method type
+  - Define `SomeFilter<T>` method type
+  - Define `SomeGetOrElse<T>` method type
+  - Define `SomeGet<T>` method type
+  - Define `SomeHKTO<T>` combining Some methods
+  - Define `NoneMap` method type
+  - Define `NoneFlatMap` method type
+  - Define `NoneFilter` method type
+  - Define `NoneGetOrElse` method type
+  - Define `NoneGet` method type
+  - Define `NoneHKTO` combining None methods
+  - Define `OptionHKTO<T>` as union
+  - Define `Some` HKTF constructor type
+  - Define `None` HKTF constructor type
+  - Notes: Complete type-level Option definition
+
+- [ ] **Implement Option runtime**
+  - Derive `Option<T>` type from `OptionHKTO<T>` using HKTO.ToObject
+  - Derive `SomeFunction` type from `Some` HKTF
+  - Derive `NoneFunction` type from `None` HKTF
+  - Implement `Some` constructor matching SomeFunction
+  - Implement `None` constructor matching NoneFunction
+  - Implement `map` helper function
+  - Implement `flatMap` helper function
+  - Implement `filter` helper function
+  - Implement `getOrElse` helper function
+  - Implement `get` helper function
+  - Implement `isSome` type guard
+  - Implement `isNone` type guard
+  - Notes: Runtime matches type-level exactly
+
+- [ ] **Write tests for Option type**
+  - Test Some construction and methods
+  - Test None construction and methods
+  - Test map with Some and None
+  - Test flatMap chaining
+  - Test filter with predicate
+  - Test getOrElse with defaults
+  - Test get success and failure
+  - Test isSome and isNone type guards
+  - Test type inference throughout
+  - Notes: Aim for 100% coverage
+
+- [ ] **Write Option documentation**
+  - Document Option type and philosophy
+  - Document each method with examples
+  - Document type guards
+  - Document when to use Option vs Result
+  - Add examples for common use cases (null handling, etc.)
+  - Notes: Reference functional programming concepts
+
+### 0.4 Either Type (@servicejs/either)
+
+- [ ] **Define Either HKT types**
+  - Define `LeftMap<L>` method type
+  - Define `LeftMapRight<L>` method type
+  - Define `LeftGet<L>` method type
+  - Define `LeftHKTO<L>` combining Left methods
+  - Define `RightMap<R>` method type
+  - Define `RightMapLeft<R>` method type
+  - Define `RightGet<R>` method type
+  - Define `RightHKTO<R>` combining Right methods
+  - Define `EitherHKTO<L, R>` as union
+  - Define `Left` HKTF constructor type
+  - Define `Right` HKTF constructor type
+  - Notes: Complete type-level Either definition
+
+- [ ] **Implement Either runtime**
+  - Derive `Either<L, R>` type from `EitherHKTO<L, R>` using HKTO.ToObject
+  - Derive `LeftFunction` type from `Left` HKTF
+  - Derive `RightFunction` type from `Right` HKTF
+  - Implement `Left` constructor matching LeftFunction
+  - Implement `Right` constructor matching RightFunction
+  - Implement `map` helper function (maps right)
+  - Implement `mapLeft` helper function
+  - Implement `isLeft` type guard
+  - Implement `isRight` type guard
+  - Notes: Runtime matches type-level exactly
+
+- [ ] **Write tests for Either type**
+  - Test Left construction and methods
+  - Test Right construction and methods
+  - Test map with Left and Right
+  - Test mapLeft with Left and Right
+  - Test isLeft and isRight type guards
+  - Test type inference throughout
+  - Notes: Aim for 100% coverage
+
+- [ ] **Write Either documentation**
+  - Document Either type and philosophy
+  - Document each method with examples
+  - Document type guards
+  - Document when to use Either vs Result
+  - Add examples for validation, parsing, etc.
+  - Notes: Explain relationship to Result
+
+### 0.5 Pure Function Utilities (@servicejs/pure)
+
+- [ ] **Define pure function HKT types**
+  - Define `Identity` HKTF type
+  - Define `Const<A>` HKTF type
+  - Define `Compose<F, G>` HKTF type
+  - Define `Pipe<Fns>` HKTF type (tuple of functions)
+  - Notes: Type-level pure function utilities
+
+- [ ] **Implement pure function runtime**
+  - Implement `identity<T>(x: T): T` function
+  - Implement `constant<T>(x: T): () => T` function
+  - Implement `compose<A, B, C>(f: (b: B) => C, g: (a: A) => B): (a: A) => C`
+  - Implement `pipe` with overloads for 2-10 functions
+  - Implement `curry` for currying functions
+  - Implement `uncurry` for uncurrying functions
+  - Implement `flip<A, B, C>(f: (a: A, b: B) => C): (b: B, a: A) => C`
+  - Notes: Standard functional programming utilities
+
+- [ ] **Write tests for pure functions**
+  - Test identity with various types
+  - Test constant creates constant function
+  - Test compose chains functions correctly
+  - Test pipe chains functions correctly
+  - Test curry and uncurry
+  - Test flip swaps arguments
+  - Test type inference throughout
+  - Notes: Property-based tests where applicable
+
+- [ ] **Write pure function documentation**
+  - Document each function with examples
+  - Document type signatures
+  - Document when to use each utility
+  - Add examples of function composition
+  - Notes: Reference functional programming concepts
+
+### 0.6 Type Utilities Integration
+
+- [ ] **Create type utilities comparison guide**
+  - Table comparing Result, Option, Either
+  - Decision tree for choosing appropriate type
+  - Examples of each use case
+  - Notes: Help users choose correctly
+
+- [ ] **Create comprehensive examples**
+  - Result example: File operations with error handling
+  - Option example: Null-safe user lookup
+  - Either example: Validation with detailed errors
+  - Pure functions example: Data transformation pipeline
+  - Combined example: Using all utilities together
+  - Notes: Real-world scenarios
+
+- [ ] **Write migration guide from standard TypeScript**
+  - Converting `null | T` to `Option<T>`
+  - Converting `try/catch` to `Result<T, E>`
+  - Converting validation to `Either<Error, T>`
+  - Notes: Help users adopt type utilities
+
+---
+
+## Milestone 1: Project Infrastructure & Core Foundation
+
+**Goal:** Set up the project structure, tooling, and implement the core framework types built on HKT foundation.
+
+**Estimated Effort:** 3-5 days
+
+### 1.1 Core Types (@servicejs/core)
 
 - [ ] **Implement URN type**
   - Define `URN` branded string type

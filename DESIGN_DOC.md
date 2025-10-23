@@ -30,7 +30,9 @@ ServiceJS is a capability-based, message-passing framework for TypeScript that e
 
 The framework consists of:
 
-- **Tiny Pure Core**: Reducer functions, capabilities, messages, effects
+- **Higher-Kinded Types Foundation**: Type-level programming infrastructure (HKTFs, HKTOs) for compile-time protocol verification
+- **Type Utilities**: Pure functions, Option, Result, Either - all with HKT definitions and runtime implementations
+- **Tiny Pure Core**: Reducer functions, capabilities, messages, effects - built on HKT foundation
 - **Standard Utilities**: Mailboxes, patterns (request/reply, pub/sub), lifecycle management, backpressure
 - **Developer Experience Layer**: Class-based decorators, method-to-message conversion, fluent builders
 - **Transport Layer**: Location-transparent communication (local, worker, network)
@@ -226,8 +228,22 @@ Location transparency provides:
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
 │                            Pure Core                              │
-│  @servicejs/core - Result, URN, Message, Capability, Reducer    │
-│                    (Zero runtime overhead, type-level only)      │
+│  @servicejs/core - URN, Message, Capability, Reducer, Component │
+│                    (Built on HKT foundation)                     │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────────────────────────────────────┐
+│                        Type Utilities                             │
+│  @servicejs/result - Result<T, E> with HKT types                │
+│  @servicejs/option - Option<T> with HKT types                   │
+│  @servicejs/either - Either<L, R> with HKT types                │
+│  @servicejs/pure   - Pure functions (compose, pipe, identity)   │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────────────────────────────────────┐
+│                    HKT Foundation (Type-Level)                    │
+│  @servicejs/hkt - HKTF, HKTO, Method, Protocol helpers          │
+│                   (Pure type-level, zero runtime)                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -534,7 +550,434 @@ No existing framework combines all these properties.
 
 ---
 
+## Higher-Kinded Types Architecture
+
+### Overview
+
+ServiceJS uses Higher-Kinded Types (HKTs) as the foundation for type-level protocol verification and compile-time safety. HKTs allow us to:
+
+1. Define protocols as first-class types (HKTOs)
+2. Verify implementations match protocols at compile-time
+3. Derive runtime types from type-level definitions
+4. Ensure session type correctness
+
+### Core HKT Concepts
+
+#### HKTF (Higher-Kinded Type Functions)
+
+HKTFs are type-level functions that take type arguments and return types:
+
+```typescript
+// Type-level function
+interface HKTF.Base {
+  [ArgsSymbol]: unknown;      // Input types
+  [DefaultsSymbol]?: unknown; // Default values for partial application
+  [ResultSymbol]: unknown;    // Output type
+}
+
+// Apply a type function
+type Result = HKTF.Apply<SomeHKTF, { arg: number }>;
+```
+
+Examples:
+- `Some<T>` - Constructor for Option.Some
+- `Ok<T>` - Constructor for Result.Ok
+- Function types as HKTFs
+
+#### HKTO (Higher-Kinded Type Objects)
+
+HKTOs are type-level objects that dispatch messages to methods:
+
+```typescript
+interface HKTO.Base extends HKTF.Base {
+  [ArgsSymbol]: unknown;              // Accepted message types
+  [ResultSymbol]: unknown;            // Result based on message
+  [MethodsSymbol]: readonly Method.Base[]; // Tuple of methods
+}
+
+// Send a message to an HKTO
+type Result = HKTO.Send<SomeHKTO, SomeMessage>;
+```
+
+HKTOs correspond directly to our event-sourced reducer objects:
+- Methods = message handlers
+- State captured in type parameters
+- Message dispatch = pattern matching on message type
+
+#### Method Pattern
+
+Methods are type-level functions that handle specific message types:
+
+```typescript
+interface Method.Base<Message, Result> extends HKTF.Base {
+  [ArgsSymbol]: Message;
+  [ResultSymbol]: Result;
+}
+```
+
+### Runtime Derivation
+
+HKT definitions are pure types. We derive runtime implementations using helper types:
+
+#### HKTF.ToFunction
+
+Converts HKTF to runtime function signature:
+
+```typescript
+// Type-level definition
+interface Some extends HKTF.Base {
+  [ArgsSymbol]: { value: unknown };
+  [ResultSymbol]: SomeHKTO<Args<this>["value"]>;
+}
+
+// Derive runtime function type
+type SomeFunction = HKTF.ToFunction<Some>;
+// Result: <T>(args: { value: T }) => SomeHKTO<T>
+
+// Runtime implementation
+export const Some: SomeFunction = (args) => { ... };
+```
+
+#### HKTO.ToObject
+
+Converts HKTO to runtime object type with methods:
+
+```typescript
+// Type-level definition
+interface OptionHKTO<T> extends HKTO.Combine<[
+  MapMethod<T>,
+  GetMethod<T>,
+  ...
+]> {}
+
+// Derive runtime object type
+type OptionObject<T> = HKTO.ToObject<OptionHKTO<T>>;
+// Result: { map: ..., get: ..., ... }
+
+// Runtime implementation
+export const Some = <T>(value: T): OptionObject<T> => ({
+  map: (fn) => Some(fn(value)),
+  get: () => value,
+  ...
+});
+```
+
+### Protocol Helpers
+
+#### ToReducer
+
+Converts HKTO protocol to reducer signature:
+
+```typescript
+type Reducer<State, Protocol extends HKTO.Base> =
+  Protocol.ToReducer<Protocol, State>;
+
+// Verifies reducer implements protocol
+const reducer: Reducer<CounterState, CounterProtocol> = ...;
+```
+
+#### Implements
+
+Type-level check that implementation matches protocol:
+
+```typescript
+type Check = Protocol.Implements<CounterProtocol, typeof myReducer>;
+// Result: true or compile error
+```
+
+### Message Shape Convention
+
+For `HKTO.ToObject` to derive method names, messages must have a `type` field:
+
+```typescript
+interface IncrementMessage {
+  type: 'increment'; // Method name
+  amount: number;
+}
+
+// Becomes:
+// { increment: (msg: IncrementMessage) => Result }
+```
+
+For HKTOs without this convention, message dispatch is still type-safe but method naming requires explicit configuration.
+
+### Session Types via HKTOs
+
+HKTOs naturally express session types:
+
+```typescript
+// ATM protocol as HKTO
+interface IdleATM extends HKTO.Combine<[InsertCardMethod]> {}
+
+interface InsertCardMethod extends Method.Base<
+  { type: 'insertCard'; cardNumber: string },
+  CardInsertedATM  // Transition to new protocol
+> {}
+
+interface CardInsertedATM extends HKTO.Combine<[
+  EnterPinMethod,
+  EjectCardMethod
+]> {}
+
+// Type system prevents invalid transitions
+type Invalid = HKTO.Send<IdleATM, WithdrawMessage>; // Error!
+```
+
+### Benefits of HKT Architecture
+
+1. **Compile-Time Verification**: Protocols verified at compile time
+2. **Single Source of Truth**: Types generate runtime implementations
+3. **Type Safety**: Invalid message sequences caught by TypeScript
+4. **Zero Runtime Overhead**: HKTs are pure types, erased at runtime
+5. **Consistency**: Same pattern for Option, Result, Capability, Component, etc.
+6. **Tool Support**: Can generate code from HKTO definitions
+7. **Documentation**: Types ARE the documentation
+
+### Limitations
+
+1. **No Type-Level Arithmetic**: Can't compute `Count + 1` at type level (TypeScript limitation)
+2. **Complexity**: Advanced type-level programming required for new HKTOs
+3. **Error Messages**: Type errors can be cryptic (mitigated by helper types)
+4. **Learning Curve**: Users don't need to understand HKTs but framework developers do
+
+### Design Decision: HKTs as Foundation
+
+**Why make HKTs foundational rather than optional?**
+
+1. **Session types require type-level state**: Can't verify protocols without HKTs
+2. **Consistency**: Using HKTs everywhere creates uniform patterns
+3. **Future-proof**: Enables advanced features (protocol verification, code gen)
+4. **User-invisible**: Users interact with runtime objects, not HKT types
+5. **Type safety**: Compile-time guarantees prevent entire classes of bugs
+
+**Users don't need to understand HKTs:**
+- They use runtime objects (Option, Result, Capability)
+- HKT types are inferred automatically
+- Error messages reference concrete types, not HKTO internals
+- Documentation uses familiar object-oriented terminology
+
+---
+
 ## Detailed Design
+
+### HKT Foundation (@servicejs/hkt)
+
+#### Core Type Machinery
+
+The HKT package provides the type-level infrastructure that all other packages build on. It is pure type-level code with zero runtime overhead.
+
+```typescript
+// @servicejs/hkt/src/hktf.ts
+export namespace HKTF {
+  export declare const ArgsSymbol: unique symbol;
+  export declare const DefaultsSymbol: unique symbol;
+  export declare const ResultSymbol: unique symbol;
+
+  export interface Base {
+    [ArgsSymbol]: unknown;
+    [DefaultsSymbol]?: unknown;
+    [ResultSymbol]: unknown;
+  }
+
+  export type Args<F extends Base> =
+    F extends { [DefaultsSymbol]: infer D }
+      ? F[typeof ArgsSymbol] & D
+      : F[typeof ArgsSymbol];
+
+  export type Result<F extends Base> = F[typeof ResultSymbol];
+
+  export type Apply<F extends Base, Input extends Partial<F[typeof ArgsSymbol]>> =
+    Result<PartialApply<F, Input>>;
+
+  // Convert HKTF to runtime function signature
+  export type ToFunction<F extends Base> =
+    <Input extends Partial<F[typeof ArgsSymbol]>>(
+      args: Input
+    ) => Result<PartialApply<F, Input>>;
+}
+
+// @servicejs/hkt/src/hkto.ts
+export namespace HKTO {
+  export declare const MethodsSymbol: unique symbol;
+
+  export interface Base extends HKTF.Base {
+    [HKTF.ArgsSymbol]: unknown;
+    [HKTF.ResultSymbol]: unknown;
+    [MethodsSymbol]: readonly Method.Base[];
+  }
+
+  export type Send<O extends Base, Message extends O[typeof HKTF.ArgsSymbol]> =
+    SendToMethods<O[typeof MethodsSymbol], Message>;
+
+  export interface Combine<Methods extends readonly Method.Base[]> extends Base {
+    [HKTF.ArgsSymbol]: ExtractMessages<Methods>;
+    [HKTF.ResultSymbol]: Send<this, HKTF.Args<this>>;
+    [MethodsSymbol]: Methods;
+  }
+
+  // Convert HKTO to runtime object type
+  export type ToObject<O extends Base> = {
+    readonly _tag?: string;
+  } & MethodsToObject<O[typeof MethodsSymbol]>;
+
+  type MethodsToObject<Methods extends readonly Method.Base[]> =
+    Methods extends readonly []
+      ? {}
+      : Methods extends readonly [infer M, ...infer Rest]
+        ? M extends Method.Base
+          ? Rest extends readonly Method.Base[]
+            ? MethodToObjectMethod<M> & MethodsToObject<Rest>
+            : MethodToObjectMethod<M>
+          : {}
+        : {};
+
+  type MethodToObjectMethod<M extends Method.Base> = {
+    readonly [K in ExtractMethodName<Method.MessageOf<M>>]: (
+      msg: Method.MessageOf<M>
+    ) => HKTF.Result<M>;
+  };
+
+  type ExtractMethodName<Msg> =
+    Msg extends { type: infer Name extends string }
+      ? Name
+      : 'send';
+}
+
+// @servicejs/hkt/src/method.ts
+export namespace Method {
+  export interface Base<Message = unknown, Result = unknown> extends HKTF.Base {
+    [HKTF.ArgsSymbol]: Message;
+    [HKTF.ResultSymbol]: Result;
+  }
+
+  export type MessageOf<M extends Base> = M[typeof HKTF.ArgsSymbol];
+}
+
+// @servicejs/hkt/src/protocol.ts
+export namespace Protocol {
+  // Convert HKTO to reducer signature
+  export type ToReducer<O extends HKTO.Base, State> = (
+    state: State,
+    message: O[typeof HKTF.ArgsSymbol]
+  ) => {
+    state: State;
+    reducer: ToReducer<HKTO.Send<O, typeof message>, State>;
+    effects: readonly Effect[];
+  };
+
+  // Verify implementation matches protocol
+  export type Implements<
+    Protocol extends HKTO.Base,
+    Impl
+  > = Impl extends ToReducer<Protocol, any> ? true : false;
+}
+```
+
+### Type Utilities
+
+#### Result Type (@servicejs/result)
+
+Complete Result type with HKT definitions and runtime implementation:
+
+```typescript
+// @servicejs/result/src/types.ts
+import { HKTF, HKTO, Method } from '@servicejs/hkt';
+
+export namespace ResultTypes {
+  // Method types for Ok variant
+  export interface OkMap<T> extends Method.Base<
+    { type: 'map'; fn: (value: T) => unknown },
+    unknown
+  > {
+    [HKTF.ResultSymbol]: Args<this>['fn'] extends (value: T) => infer U
+      ? OkHKTO<U>
+      : never;
+  }
+
+  export interface OkMapErr<T, E> extends Method.Base<
+    { type: 'mapErr'; fn: (error: never) => unknown },
+    OkHKTO<T>
+  > {}
+
+  export interface OkAndThen<T> extends Method.Base<
+    { type: 'andThen'; fn: (value: T) => ResultHKTO<unknown, unknown> },
+    unknown
+  > {
+    [HKTF.ResultSymbol]: Args<this>['fn'] extends (value: T) => infer R
+      ? R
+      : never;
+  }
+
+  export interface OkUnwrap<T> extends Method.Base<
+    { type: 'unwrap' },
+    T
+  > {}
+
+  // Ok HKTO
+  export interface OkHKTO<T> extends HKTO.Combine<readonly [
+    OkMap<T>,
+    OkMapErr<T, never>,
+    OkAndThen<T>,
+    OkUnwrap<T>
+  ]> {}
+
+  // Similar for Err variant...
+  export interface ErrHKTO<E> extends HKTO.Combine<readonly [...]> {}
+
+  export type ResultHKTO<T, E> = OkHKTO<T> | ErrHKTO<E>;
+
+  // Constructor types
+  export interface Ok extends HKTF.Base {
+    [HKTF.ArgsSymbol]: { value: unknown };
+    [HKTF.ResultSymbol]: OkHKTO<HKTF.Args<this>['value']>;
+  }
+
+  export interface Err extends HKTF.Base {
+    [HKTF.ArgsSymbol]: { error: unknown };
+    [HKTF.ResultSymbol]: ErrHKTO<HKTF.Args<this>['error']>;
+  }
+}
+
+// @servicejs/result/src/runtime.ts
+import { HKTO, HKTF } from '@servicejs/hkt';
+import { ResultTypes } from './types.js';
+
+// Derive runtime type from HKTO
+export type Result<T, E> = HKTO.ToObject<ResultTypes.ResultHKTO<T, E>>;
+
+// Derive constructor signatures from HKTFs
+export type OkFunction = HKTF.ToFunction<ResultTypes.Ok>;
+export type ErrFunction = HKTF.ToFunction<ResultTypes.Err>;
+
+// Runtime implementations
+export const Ok: OkFunction = ({ value }) => ({
+  map: (fn) => Ok({ value: fn.fn(value) }),
+  mapErr: (_fn) => Ok({ value }),
+  andThen: (fn) => fn.fn(value),
+  unwrap: () => value,
+  _tag: 'Ok' as const,
+});
+
+export const Err: ErrFunction = ({ error }) => ({
+  map: (_fn) => Err({ error }),
+  mapErr: (fn) => Err({ error: fn.fn(error) }),
+  andThen: (_fn) => Err({ error }),
+  unwrap: () => { throw new Error('Cannot unwrap Err'); },
+  _tag: 'Err' as const,
+});
+
+// Helper functions
+export const map = <T, U, E>(
+  result: Result<T, E>,
+  fn: (value: T) => U
+): Result<U, E> => result.map({ type: 'map', fn: { fn } });
+
+export const isOk = <T, E>(result: Result<T, E>): result is Result<T, never> =>
+  result._tag === 'Ok';
+
+export const isErr = <T, E>(result: Result<T, E>): result is Result<never, E> =>
+  result._tag === 'Err';
+```
 
 ### Core Types (@servicejs/core)
 
