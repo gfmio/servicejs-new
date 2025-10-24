@@ -18,10 +18,19 @@ export interface CamelCase extends HKTF.Base {
 export function camelCase<const S extends string>(str: S): HKTF.Apply<CamelCase, {str: S}>;
 export function camelCase<const T extends CamelCaseArgs>(args: T): HKTF.Apply<CamelCase, T>;
 export function camelCase<const T extends CamelCaseArgs>(...args: [T] | [T["str"]]): HKTF.Apply<CamelCase, T> {
-  const convert = (s: string) =>
-    s
+  const convert = (s: string) => {
+    // Handle PascalCase, camelCase, kebab-case, snake_case, spaces
+    const result = s
+      // Insert space before uppercase letters
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      // Replace non-alphanumeric with spaces
+      .replace(/[-_\s]+/g, ' ')
+      .trim()
       .toLowerCase()
-      .replace(/[-_\s]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''));
+      // Capitalize first letter of each word except the first
+      .replace(/\s+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''));
+    return result;
+  };
 
   if (typeof args[0] === 'object' && 'str' in args[0]) {
     return convert(args[0].str) as unknown as HKTF.Apply<CamelCase, T>;
