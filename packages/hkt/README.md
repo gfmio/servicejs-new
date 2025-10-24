@@ -67,6 +67,119 @@ interface MapResult<T extends MapArgs> {
 }
 ```
 
+### TupleHKTF (Type-Level Tuple Operations)
+
+Type-level operations on tuple types (readonly arrays at the type level).
+
+```typescript
+import { HKTF, TupleHKTF, FunctionHKTF } from '@servicejs/hkt';
+
+// Map over tuple elements
+type Doubled = HKTF.Apply<
+  TupleHKTF.Map,
+  { tuple: readonly [1, 2, 3]; fn: FunctionHKTF.Fn1<number, number> }
+>;
+// Result: readonly [number, number, number]
+
+// Get tuple length
+type Length = HKTF.Apply<
+  TupleHKTF.Length,
+  { tuple: readonly [1, 2, 3, 4, 5] }
+>;
+// Result: 5
+
+// Concatenate tuples
+type Combined = HKTF.Apply<
+  TupleHKTF.Concat,
+  { tuple1: readonly [1, 2]; tuple2: readonly [3, 4] }
+>;
+// Result: readonly [1, 2, 3, 4]
+
+// Reverse a tuple
+type Reversed = HKTF.Apply<
+  TupleHKTF.Reverse,
+  { tuple: readonly [1, 2, 3] }
+>;
+// Result: readonly [3, 2, 1]
+
+// Get head and tail
+type First = HKTF.Apply<TupleHKTF.Head, { tuple: readonly [1, 2, 3] }>;
+// Result: 1
+
+type Rest = HKTF.Apply<TupleHKTF.Tail, { tuple: readonly [1, 2, 3] }>;
+// Result: readonly [2, 3]
+```
+
+### Arithmetic (Type-Level Number Operations)
+
+Type-level arithmetic operations on number literal types. Supports positive and negative integers with operations: add, sub, mul, div, mod, pow.
+
+**Implementation:** Uses string-based digit-by-digit algorithms (similar to grade-school arithmetic) to support arbitrarily large numbers without hitting TypeScript's recursion limits. Addition and multiplication work with very large numbers, while division/modulo use repeated subtraction (limited to ~1000 iterations for performance).
+
+```typescript
+import { HKTF, Arithmetic } from '@servicejs/hkt';
+
+// Addition
+type Sum = HKTF.Apply<Arithmetic.Add, { a: 5; b: 3 }>;
+// Result: { result: 8 }
+
+type SumNeg = HKTF.Apply<Arithmetic.Add, { a: -5; b: 3 }>;
+// Result: { result: -2 }
+
+// Subtraction
+type Diff = HKTF.Apply<Arithmetic.Sub, { a: 10; b: 4 }>;
+// Result: { result: 6 }
+
+// Multiplication
+type Product = HKTF.Apply<Arithmetic.Mul, { a: 4; b: 5 }>;
+// Result: { result: 20 }
+
+// Integer Division
+type Quotient = HKTF.Apply<Arithmetic.Div, { a: 10; b: 3 }>;
+// Result: { result: 3 }
+
+// Modulo
+type Remainder = HKTF.Apply<Arithmetic.Mod, { a: 10; b: 3 }>;
+// Result: { result: 1 }
+
+// Power (Exponentiation)
+type Power = HKTF.Apply<Arithmetic.Pow, { base: 2; exponent: 3 }>;
+// Result: { result: 8 }
+
+// Comparison operations
+type IsLess = HKTF.Apply<Arithmetic.Lt, { a: 3; b: 5 }>;
+// Result: { result: true }
+
+type IsGreater = HKTF.Apply<Arithmetic.Gt, { a: 5; b: 3 }>;
+// Result: { result: true }
+
+type Maximum = HKTF.Apply<Arithmetic.MaxHKTF, { a: 5; b: 3 }>;
+// Result: { result: 5 }
+
+type Minimum = HKTF.Apply<Arithmetic.MinHKTF, { a: 5; b: 3 }>;
+// Result: { result: 3 }
+
+// Utility operations
+type Absolute = HKTF.Apply<Arithmetic.AbsHKTF, { n: -5 }>;
+// Result: { result: 5 }
+
+type Negated = HKTF.Apply<Arithmetic.NegateHKTF, { n: 5 }>;
+// Result: { result: -5 }
+
+// Complex expressions (chain operations)
+// Calculate: (5 + 3) * 2 = 16
+type Step1 = HKTF.Apply<Arithmetic.Add, { a: 5; b: 3 }>;
+type Step2 = HKTF.Apply<Arithmetic.Mul, { a: Step1['result']; b: 2 }>;
+// Step2: { result: 16 }
+
+// Works with larger numbers too!
+type LargeAdd = HKTF.Apply<Arithmetic.Add, { a: 999999; b: 1 }>;
+// Result: { result: 1000000 }
+
+type LargeMul = HKTF.Apply<Arithmetic.Mul, { a: 123; b: 456 }>;
+// Result: { result: 56088 }
+```
+
 ### HKTO (Higher-Kinded Type Objects)
 
 Type-level objects that dispatch messages to methods.
@@ -188,6 +301,56 @@ type Check = Protocol.Implements<CounterHKTO, typeof myReducer>;
 // Result: true (or compile error)
 ```
 
+### Composition and Utilities
+
+The package includes powerful utilities for type-level programming:
+
+```typescript
+import { HKTF, Compose, StringHKTF, TupleHKTF, ObjectHKTF, Util } from '@servicejs/hkt';
+
+// Compose HKTFs
+type Result = HKTF.Apply<
+  Compose.Compose,
+  { f: ToUpperHKTF; g: ReverseHKTF; input: 'hello' }
+>;
+// Result: 'OLLEH'
+
+// Pipe through multiple operations
+type PipedResult = HKTF.Apply<
+  Compose.Pipe,
+  { functions: readonly [AddOne, Double, AddOne]; input: 5 }
+>;
+// Result: 13 (conceptually: ((5 + 1) * 2) + 1)
+
+// String operations
+type Joined = HKTF.Apply<
+  StringHKTF.Join,
+  { strings: readonly ['hello', 'world']; delimiter: ' ' }
+>;
+// Result: 'hello world'
+
+// Object operations
+type Picked = HKTF.Apply<
+  ObjectHKTF.PickHKTF,
+  { obj: { a: 1; b: 2; c: 3 }; keys: readonly ['a', 'c'] }
+>;
+// Result: { a: 1; c: 3 }
+
+// Tuple operations
+type Zipped = HKTF.Apply<
+  TupleHKTF.Zip,
+  { tuple1: readonly [1, 2, 3]; tuple2: readonly ['a', 'b', 'c'] }
+>;
+// Result: readonly [[1, 'a'], [2, 'b'], [3, 'c']]
+
+// Type predicates
+type IsEqual = HKTF.Apply<Util.Equals, { type1: number; type2: number }>;
+// Result: true
+
+type IsTuple = HKTF.Apply<Util.IsTuple, { type: readonly [1, 2, 3] }>;
+// Result: true
+```
+
 ## Complete Example
 
 Here's a complete example showing the recommended pattern:
@@ -304,6 +467,120 @@ type Mapped = HKTO.Send<
 - `FunctionHKTF.Fn2<I1, I2, O>` - Binary function HKTF
 - `FunctionHKTF.Predicate<T>` - Predicate HKTF (returns boolean)
 - `FunctionHKTF.Reducer<Acc, Val>` - Reducer HKTF (accumulator function)
+
+### TupleHKTF
+
+- `TupleHKTF.Map` - Map a function over tuple elements
+- `TupleHKTF.Filter` - Filter tuple elements by predicate
+- `TupleHKTF.Reduce` - Reduce tuple to single value
+- `TupleHKTF.Length` - Get tuple length as literal number
+- `TupleHKTF.Head` - Get first element of tuple
+- `TupleHKTF.Tail` - Get all elements except first
+- `TupleHKTF.Concat` - Concatenate two tuples
+- `TupleHKTF.Reverse` - Reverse tuple order
+- `TupleHKTF.Zip` - Combine two tuples element-wise into pairs
+- `TupleHKTF.Flatten` - Flatten nested tuples one level
+- `TupleHKTF.Partition` - Split tuple by predicate into [matching, non-matching]
+- `TupleHKTF.Take` - Take first N elements
+- `TupleHKTF.Drop` - Drop first N elements
+- `TupleHKTF.Find` - Find first element matching predicate
+- `TupleHKTF.Contains` - Check if tuple contains element
+
+### ObjectHKTF
+
+- `ObjectHKTF.MapValues` - Map function over object values
+- `ObjectHKTF.MapKeys` - Transform object keys
+- `ObjectHKTF.PickHKTF` - Pick subset of keys from object
+- `ObjectHKTF.OmitHKTF` - Omit subset of keys from object
+- `ObjectHKTF.Merge` - Merge two objects (right overrides left)
+- `ObjectHKTF.Get` - Get value at path in object
+- `ObjectHKTF.Set` - Set value at path in object
+- `ObjectHKTF.Keys` - Get object keys as tuple
+- `ObjectHKTF.Values` - Get object values as tuple
+- `ObjectHKTF.Entries` - Get object entries as tuple of [key, value] pairs
+
+### StringHKTF
+
+- `StringHKTF.Concat` - Concatenate two strings
+- `StringHKTF.Split` - Split string by delimiter into tuple
+- `StringHKTF.Join` - Join tuple of strings with delimiter
+- `StringHKTF.ToUpper` - Convert string to uppercase
+- `StringHKTF.ToLower` - Convert string to lowercase
+- `StringHKTF.CapitalizeHKTF` - Capitalize first letter
+- `StringHKTF.UncapitalizeHKTF` - Uncapitalize first letter
+- `StringHKTF.StartsWith` - Check if string starts with prefix
+- `StringHKTF.EndsWith` - Check if string ends with suffix
+- `StringHKTF.Replace` - Replace first occurrence of substring
+- `StringHKTF.ReplaceAll` - Replace all occurrences of substring
+- `StringHKTF.Trim` - Trim whitespace from both ends
+- `StringHKTF.Length` - Get string length as number
+
+### Compose
+
+- `Compose.Identity` - Returns input unchanged
+- `Compose.Constant` - Always returns the same value
+- `Compose.Compose` - Compose two HKTFs (apply f then g)
+- `Compose.Pipe` - Pipe input through multiple HKTFs in sequence
+
+### Util
+
+**Type Predicates:**
+- `Util.IsNever` - Check if type is never
+- `Util.IsAny` - Check if type is any
+- `Util.IsUnknown` - Check if type is unknown
+- `Util.Equals` - Check if two types are equal
+- `Util.IsExtends` - Check if type1 extends type2
+- `Util.IsUnion` - Check if type is a union
+- `Util.IsTuple` - Check if type is a tuple (fixed-length array)
+- `Util.IsArray` - Check if type is an array
+- `Util.IsObject` - Check if type is an object (not array/function)
+- `Util.IsFunction` - Check if type is a function
+
+**Boolean Logic:**
+- `Util.Not` - Logical NOT
+- `Util.And` - Logical AND
+- `Util.Or` - Logical OR
+
+### Combinator
+
+- `Combinator.Extend` - Extend HKTO with additional methods
+- `Combinator.MapMethods` - Transform all method results through a function
+- `Combinator.FilterMethods` - Filter methods by predicate on message type
+- `Combinator.MergeTwoHKTOs` - Merge two HKTOs into one
+- `Combinator.ComposeHKTOs` - Compose two HKTOs
+
+### Errors
+
+- `Errors.ErrorMessage<TError, TDetails>` - Generic error message type
+- `Errors.InvalidMessageError<T>` - Message must have 'type' field
+- `Errors.MethodNotFoundError<TType, THKTO>` - HKTO doesn't handle message type
+- `Errors.InvalidFunctionError<T>` - Must use FunctionHKTF, not raw functions
+- `Errors.InvalidHKTFError<T>` - Must extend HKTF.Base
+- `Errors.TypeMismatchError<TExp, TRec>` - Type doesn't match expected
+- `Errors.EmptyTupleError<TOp>` - Operation requires non-empty tuple
+- `Errors.IndexOutOfBoundsError<TIdx, TLen>` - Index outside tuple bounds
+- `Errors.InvalidPathError<TPath, TObj>` - Path doesn't exist in object
+- `Errors.RecursionDepthError<TOp>` - TypeScript recursion limit exceeded
+
+### Arithmetic
+
+**Basic Operations:**
+- `Arithmetic.Add` - Addition (a + b)
+- `Arithmetic.Sub` - Subtraction (a - b)
+- `Arithmetic.Mul` - Multiplication (a × b)
+- `Arithmetic.Div` - Integer division (a ÷ b, quotient only)
+- `Arithmetic.Mod` - Modulo (a % b, remainder)
+- `Arithmetic.Pow` - Exponentiation (base^exponent)
+
+**Comparison Operations:**
+- `Arithmetic.Lt` - Less than (a < b)
+- `Arithmetic.Gt` - Greater than (a > b)
+- `Arithmetic.MaxHKTF` - Maximum of two numbers
+- `Arithmetic.MinHKTF` - Minimum of two numbers
+
+**Utility Operations:**
+- `Arithmetic.AbsHKTF` - Absolute value |n|
+- `Arithmetic.NegateHKTF` - Negation (-n)
 
 ### HKTO
 
