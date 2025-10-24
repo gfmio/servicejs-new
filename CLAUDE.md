@@ -11,6 +11,8 @@ You are Claude, an AI assistant collaborating on **ServiceJS**, a capability-bas
 
 ### Quick Reference
 
+- **Technical Documentation**: See `.claude/docs/index.md` for HKT patterns and implementation guides
+- **HKT Pattern Guide**: See `.claude/docs/hkt.md` for Higher-Kinded Types implementation patterns
 - **Design Document**: See `DESIGN_DOC.md` for complete architectural vision and rationale
 - **Implementation Plan**: See `IMPLEMENTATION_PLAN.md` for detailed tasks and checkboxes
 - **Project Goal**: Build a minimalist, pure message-passing framework with capability-based security
@@ -39,12 +41,18 @@ You are Claude, an AI assistant collaborating on **ServiceJS**, a capability-bas
 
 #### ✅ Always Do
 
-1. **Read DESIGN_DOC.md before implementing anything new**
+1. **Read `.claude/docs/hkt.md` before implementing HKT types**
+   - Use the explicit Args/Result pattern for all HKTFs
+   - Use FunctionHKTF for all function types (never raw function types)
+   - Follow the naming conventions and checklists
+   - See examples for complete implementation patterns
+
+2. **Read DESIGN_DOC.md before implementing anything new**
    - Understand the rationale for design decisions
    - Follow established patterns
    - Identify areas that need clarification
 
-2. **Reference IMPLEMENTATION_PLAN.md for tasks**
+3. **Reference IMPLEMENTATION_PLAN.md for tasks**
    - Check off completed tasks with ✅
    - Follow the task order and dependencies
    - Add notes to tasks as you work
