@@ -35,7 +35,7 @@ export function has<const T extends HasArgs>(...args: [T] | [T["obj"], T["path"]
     let current: any = args[0].obj as Record<string, unknown>;
     const path = args[0].path as readonly string[];
     for (const key of path) {
-      if (current === null || current === undefined || !(key in current)) {
+      if (current === null || current === undefined || typeof current !== 'object' || !(key in current)) {
         return false as HKTF.Apply<Has, T>;
       }
       current = current[key];
@@ -45,7 +45,7 @@ export function has<const T extends HasArgs>(...args: [T] | [T["obj"], T["path"]
   let current: any = args[0] as Record<string, unknown>;
   const path = args[1] as readonly string[];
   for (const key of path) {
-    if (current === null || current === undefined || !(key in current)) {
+    if (current === null || current === undefined || typeof current !== 'object' || !(key in current)) {
       return false as HKTF.Apply<Has, T>;
     }
     current = current[key];

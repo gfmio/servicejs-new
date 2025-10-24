@@ -22,7 +22,7 @@ export function fromEntries<const E extends readonly (readonly [PropertyKey, unk
 export function fromEntries<const T extends FromEntriesArgs>(args: T): HKTF.Apply<FromEntries, T>;
 export function fromEntries<const T extends FromEntriesArgs>(...args: [T] | [T["entries"]]): HKTF.Apply<FromEntries, T> {
   if (typeof args[0] === 'object' && 'entries' in args[0]) {
-    return Object.fromEntries(args[0].entries as readonly [PropertyKey, unknown][]) as unknown as HKTF.Apply<FromEntries, T>;
+    return globalThis.Object.fromEntries(args[0].entries as readonly [PropertyKey, unknown][]) as unknown as HKTF.Apply<FromEntries, T>;
   }
-  return Object.fromEntries(args[0] as readonly [PropertyKey, unknown][]) as unknown as HKTF.Apply<FromEntries, T>;
+  return globalThis.Object.fromEntries(args[0] as readonly [PropertyKey, unknown][]) as unknown as HKTF.Apply<FromEntries, T>;
 }

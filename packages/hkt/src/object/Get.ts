@@ -33,6 +33,9 @@ export function get<const T extends GetArgs>(...args: [T] | [T["obj"], T["path"]
     let current: any = args[0].obj as Record<string, unknown>;
     const path = args[0].path as readonly string[];
     for (const key of path) {
+      if (current === null || current === undefined) {
+        return undefined as unknown as HKTF.Apply<Get, T>;
+      }
       current = current[key];
     }
     return current as HKTF.Apply<Get, T>;
@@ -40,6 +43,9 @@ export function get<const T extends GetArgs>(...args: [T] | [T["obj"], T["path"]
   let current: any = args[0] as Record<string, unknown>;
   const path = args[1] as readonly string[];
   for (const key of path) {
+    if (current === null || current === undefined) {
+      return undefined as unknown as HKTF.Apply<Get, T>;
+    }
     current = current[key];
   }
   return current as HKTF.Apply<Get, T>;
