@@ -67,7 +67,7 @@ export type Apply<
  * ```
  */
 export type ToFunction<F extends Base> = <
-  Input extends Partial<F[typeof ArgsSymbol]>
+  Input extends F[typeof ArgsSymbol]
 >(
   args: Input
 ) => Result<PartialApply<F, Input>>;
