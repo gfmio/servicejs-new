@@ -7,6 +7,7 @@
 
 import * as HKTF from './hktf.js';
 import * as Method from './method.js';
+import * as Errors from './errors.js';
 
 /**
  * Symbol for methods tuple
@@ -31,7 +32,11 @@ export interface Base extends HKTF.Base {
 export type Send<
   O extends Base,
   Message extends O[typeof HKTF.ArgsSymbol]
-> = SendToMethods<O[typeof MethodsSymbol], Message>;
+> = Message extends { type: string }
+  ? SendToMethods<O[typeof MethodsSymbol], Message> extends never
+    ? Errors.MethodNotFoundError<Message['type'], O>
+    : SendToMethods<O[typeof MethodsSymbol], Message>
+  : Errors.InvalidMessageError<Message>;
 
 /**
  * Helper: Send message to a tuple of methods
