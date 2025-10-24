@@ -4,13 +4,11 @@ export interface IsTupleArgs {
   type: unknown;
 }
 
-export interface IsTupleResult<T extends IsTupleArgs> {
-  result: T['type'] extends readonly unknown[]
+export type IsTupleResult<T extends IsTupleArgs> = T['type'] extends readonly unknown[]
     ? number extends T['type']['length']
       ? false
       : true
     : false;
-}
 
 /**
  * IsTuple - checks if type is a tuple (fixed-length array)

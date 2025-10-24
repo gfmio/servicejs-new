@@ -4,9 +4,7 @@ export interface UnionToIntersectionArgs {
   type: unknown;
 }
 
-export interface UnionToIntersectionResult<T extends UnionToIntersectionArgs> {
-  result: _UnionToIntersection<T['type']>;
-}
+export type UnionToIntersectionResult<T extends UnionToIntersectionArgs> = _UnionToIntersection<T['type']>;
 
 /**
  * UnionToIntersection - converts a union type to an intersection type

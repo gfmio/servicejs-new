@@ -5,9 +5,7 @@ export interface IsUnionArgs {
   type: unknown;
 }
 
-export interface IsUnionResult<T extends IsUnionArgs> {
-  result: [T['type']] extends [_UnionToIntersection<T['type']>] ? false : true;
-}
+export type IsUnionResult<T extends IsUnionArgs> = [T['type']] extends [_UnionToIntersection<T['type']>] ? false : true;
 
 /**
  * IsUnion - checks if type is a union

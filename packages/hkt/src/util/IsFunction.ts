@@ -4,9 +4,7 @@ export interface IsFunctionArgs {
   type: unknown;
 }
 
-export interface IsFunctionResult<T extends IsFunctionArgs> {
-  result: T['type'] extends (...args: any[]) => any ? true : false;
-}
+export type IsFunctionResult<T extends IsFunctionArgs> = T['type'] extends (...args: any[]) => any ? true : false;
 
 /**
  * IsFunction - checks if type is a function

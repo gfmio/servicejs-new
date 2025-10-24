@@ -5,9 +5,7 @@ export interface ExtendsArgs {
   type2: unknown;
 }
 
-export interface ExtendsResult<T extends ExtendsArgs> {
-  result: T['type1'] extends T['type2'] ? true : false;
-}
+export type ExtendsResult<T extends ExtendsArgs> = T['type1'] extends T['type2'] ? true : false;
 
 /**
  * Extends - checks if type1 extends type2

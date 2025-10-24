@@ -4,9 +4,7 @@ export interface IsNeverArgs {
   type: unknown;
 }
 
-export interface IsNeverResult<T extends IsNeverArgs> {
-  result: [T['type']] extends [never] ? true : false;
-}
+export type IsNeverResult<T extends IsNeverArgs> = [T['type']] extends [never] ? true : false;
 
 /**
  * IsNever - checks if type is never

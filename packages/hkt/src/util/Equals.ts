@@ -5,13 +5,11 @@ export interface EqualsArgs {
   type2: unknown;
 }
 
-export interface EqualsResult<T extends EqualsArgs> {
-  result: (<U>() => U extends T['type1'] ? 1 : 2) extends <
+export type EqualsResult<T extends EqualsArgs> = (<U>() => U extends T['type1'] ? 1 : 2) extends <
     U
   >() => U extends T['type2'] ? 1 : 2
     ? true
     : false;
-}
 
 /**
  * Equals - checks if two types are equal

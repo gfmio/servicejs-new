@@ -5,13 +5,11 @@ export interface IsUnknownArgs {
   type: unknown;
 }
 
-export interface IsUnknownResult<T extends IsUnknownArgs> {
-  result: IsNeverResult<{ type: T['type'] }>['result'] extends false
+export type IsUnknownResult<T extends IsUnknownArgs> = IsNeverResult<{ type: T['type'] }> extends false
     ? unknown extends T['type']
       ? true
       : false
     : false;
-}
 
 /**
  * IsUnknown - checks if type is unknown

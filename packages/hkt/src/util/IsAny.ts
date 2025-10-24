@@ -4,9 +4,7 @@ export interface IsAnyArgs {
   type: unknown;
 }
 
-export interface IsAnyResult<T extends IsAnyArgs> {
-  result: 0 extends 1 & T['type'] ? true : false;
-}
+export type IsAnyResult<T extends IsAnyArgs> = 0 extends 1 & T['type'] ? true : false;
 
 /**
  * IsAny - checks if type is any
