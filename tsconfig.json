@@ -41,10 +41,6 @@
     "target": "ES2022",
     "lib": ["ES2022"],
 
-    // Projects
-    "composite": true,
-    "incremental": true,
-
     // Completeness
     "skipLibCheck": true
   },
