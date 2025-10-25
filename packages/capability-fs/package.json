@@ -1,0 +1,42 @@
+{
+  "name": "@servicejs/capability-fs",
+  "version": "0.1.0",
+  "description": "Filesystem capability interface for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "servicejs",
+    "capability",
+    "filesystem",
+    "fs",
+    "dependency-injection"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  }
+}
