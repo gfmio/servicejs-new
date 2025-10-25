@@ -1,0 +1,33 @@
+{
+  "name": "@servicejs/runtime-shared-worker",
+  "version": "0.1.0",
+  "description": "Shared Worker runtime for ServiceJS - cross-tab browser worker integration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "echo 'Shared Worker tests require browser environment'"
+  },
+  "dependencies": {
+    "@servicejs/capability-env": "workspace:*",
+    "@servicejs/capability-time": "workspace:*",
+    "@servicejs/capability-lifecycle": "workspace:*",
+    "@servicejs/capability-console": "workspace:*",
+    "@servicejs/capability-http": "workspace:*",
+    "@servicejs/capability-crypto": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
