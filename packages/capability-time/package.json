@@ -1,0 +1,37 @@
+{
+  "name": "@servicejs/capability-time",
+  "version": "0.1.0",
+  "description": "Time and scheduling capability for ServiceJS - platform-agnostic time operations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "servicejs",
+    "capability",
+    "time",
+    "timers",
+    "scheduling"
+  ],
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
