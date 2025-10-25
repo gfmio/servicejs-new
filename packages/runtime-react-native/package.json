@@ -1,0 +1,41 @@
+{
+  "name": "@servicejs/runtime-react-native",
+  "version": "0.1.0",
+  "description": "React Native runtime capabilities for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "servicejs",
+    "runtime",
+    "react-native",
+    "capabilities",
+    "mobile"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "react-native": "^0.73.0"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.70.0"
+  }
+}

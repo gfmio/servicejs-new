@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-react-native-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "jest run src/index.ts",
+    "dev": "jest run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-react-native": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
