@@ -52,3 +52,16 @@ export {
   tryCatch,
   tryCatchAsync,
 } from './result.js';
+
+export {
+  fromThrowable,
+  sequence,
+  traverse,
+  collectOk,
+  collectErr,
+  firstOk,
+  combine,
+  resultWhen,
+  toNullable,
+  toUndefined,
+} from './utilities.js';
