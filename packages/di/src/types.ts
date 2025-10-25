@@ -1,6 +1,3 @@
-import type { Result } from '@servicejs/result';
-import type { Option } from '@servicejs/option';
-
 /**
  * A unique identifier for a dependency (port/interface).
  * Uses symbols for type safety and uniqueness.

@@ -237,7 +237,7 @@ export const memoize = <T extends Record<string, any>>(
   implementation: T,
   methods: (keyof T)[]
 ): T => {
-  const caches = new Map<string | symbol, Map<any, any>>();
+  const caches = new Map<string | number | symbol, Map<any, any>>();
 
   const proxy: any = { ...implementation };
 

@@ -6,7 +6,6 @@ import type {
   Factory,
   Scope,
   ResolutionError,
-  Resolved,
   DisposeFn,
 } from './types.js';
 
@@ -25,7 +24,7 @@ import type {
 export class Container {
   private readonly registrations = new Map<symbol, Registration<any, any>>();
   private readonly singletons = new Map<symbol, any>();
-  private readonly scoped = new Map<symbol, any>();
+  private readonly scopedCache = new Map<symbol, any>();
   private readonly disposables: DisposeFn[] = [];
   private resolving = new Set<symbol>();
 
@@ -168,8 +167,8 @@ export class Container {
     }
 
     // Check scoped cache
-    if (registration.scope === 'scoped' && this.scoped.has(token)) {
-      return ok(this.scoped.get(token));
+    if (registration.scope === 'scoped' && this.scopedCache.has(token)) {
+      return ok(this.scopedCache.get(token));
     }
 
     // Mark as resolving to detect circular dependencies
@@ -197,7 +196,7 @@ export class Container {
       if (registration.scope === 'singleton') {
         this.singletons.set(token, instance);
       } else if (registration.scope === 'scoped') {
-        this.scoped.set(token, instance);
+        this.scopedCache.set(token, instance);
       }
 
       return ok(instance);
@@ -262,7 +261,7 @@ export class Container {
    * Useful for cleaning up between requests or operations.
    */
   clearScope(): void {
-    this.scoped.clear();
+    this.scopedCache.clear();
   }
 
   /**
@@ -286,7 +285,7 @@ export class Container {
 
     // Clear all caches
     this.singletons.clear();
-    this.scoped.clear();
+    this.scopedCache.clear();
     this.registrations.clear();
     this.disposables.length = 0;
   }

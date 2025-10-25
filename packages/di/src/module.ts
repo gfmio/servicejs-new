@@ -182,8 +182,8 @@ export class ModuleBuilder {
         }
       },
       {
-        name: this.moduleName,
-        description: this.moduleDescription,
+        ...(this.moduleName ? { name: this.moduleName } : {}),
+        ...(this.moduleDescription ? { description: this.moduleDescription } : {}),
         dependencies: this.moduleDeps,
       }
     );
