@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-electron-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "playwright-electron run src/index.ts",
+    "dev": "playwright-electron run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-electron": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
