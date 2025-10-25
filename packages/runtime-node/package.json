@@ -1,0 +1,36 @@
+{
+  "name": "@servicejs/runtime-node",
+  "version": "0.1.0",
+  "description": "Node.js runtime for ServiceJS - complete platform integration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@servicejs/capability-env": "workspace:*",
+    "@servicejs/capability-time": "workspace:*",
+    "@servicejs/capability-lifecycle": "workspace:*",
+    "@servicejs/capability-console": "workspace:*",
+    "@servicejs/capability-fs": "workspace:*",
+    "@servicejs/capability-http": "workspace:*",
+    "@servicejs/capability-streams": "workspace:*",
+    "@servicejs/capability-crypto": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

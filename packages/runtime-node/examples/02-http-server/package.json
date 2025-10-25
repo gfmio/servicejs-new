@@ -1,0 +1,22 @@
+{
+  "name": "@servicejs-examples/runtime-node-http-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --loader ts-node/esm src/index.ts",
+    "dev": "node --watch --loader ts-node/esm src/index.ts",
+    "build": "tsc",
+    "build:run": "npm run build && node dist/index.js"
+  },
+  "dependencies": {
+    "@servicejs/runtime-node": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.0.0"
+  }
+}

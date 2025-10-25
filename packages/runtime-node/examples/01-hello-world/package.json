@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-node-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node run src/index.ts",
+    "dev": "node run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-node": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
