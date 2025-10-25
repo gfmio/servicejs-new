@@ -1,0 +1,445 @@
+/**
+ * Web Worker runtime bootstrap
+ */
+
+import { ok, err } from '@servicejs/result';
+import { some, none } from '@servicejs/option';
+import type {
+  WebWorkerRuntimeCapabilities,
+  WebWorkerBootstrapOptions,
+  MessagePortCapability,
+  MessageError,
+} from './types';
+import type { EnvironmentCapability } from '@servicejs/capability-env';
+import type { TimeCapability, TimerId } from '@servicejs/capability-time';
+import type { LifecycleCapability, ShutdownHandler } from '@servicejs/capability-lifecycle';
+import type { ConsoleCapability } from '@servicejs/capability-console';
+import type { HTTPCapability, HTTPResponse, HTTPError } from '@servicejs/capability-http';
+import type { CryptoCapability, HashAlgorithm, HMACAlgorithm } from '@servicejs/capability-crypto';
+
+// Declare Worker global scope
+declare const self: DedicatedWorkerGlobalScope;
+
+/**
+ * Bootstrap the Web Worker runtime with all capabilities
+ */
+export function bootstrap(
+  options: WebWorkerBootstrapOptions = {}
+): WebWorkerRuntimeCapabilities {
+  const {
+    config = {},
+    captureUncaughtErrors = true,
+    captureUnhandledRejections = true,
+  } = options;
+
+  // Environment capability (uses config passed from main thread)
+  const env: EnvironmentCapability = {
+    get(name) {
+      const value = config[name];
+      return value !== undefined ? some(value) : none();
+    },
+    getAll() {
+      return Object.freeze({ ...config });
+    },
+    platform() {
+      return 'web-worker';
+    },
+  };
+
+  // Time capability
+  let nextTimerId = 1;
+  const timeouts = new Map<number, number>();
+  const intervals = new Map<number, number>();
+
+  const time: TimeCapability = {
+    now() {
+      return Date.now();
+    },
+    highResolutionTime() {
+      return some(performance.now());
+    },
+    setTimeout(callback, ms) {
+      const id = nextTimerId++;
+      const timerId = self.setTimeout(() => {
+        timeouts.delete(id);
+        callback();
+      }, ms);
+      timeouts.set(id, timerId);
+      return ok(id as TimerId);
+    },
+    clearTimeout(id) {
+      const timerId = timeouts.get(id as number);
+      if (timerId !== undefined) {
+        self.clearTimeout(timerId);
+        timeouts.delete(id as number);
+        return ok(undefined);
+      }
+      return err({
+        code: 'INVALID_TIMER_ID' as const,
+        message: `Invalid timer ID: ${id}`,
+      });
+    },
+    setInterval(callback, ms) {
+      const id = nextTimerId++;
+      const timerId = self.setInterval(callback, ms);
+      intervals.set(id, timerId);
+      return ok(id as TimerId);
+    },
+    clearInterval(id) {
+      const timerId = intervals.get(id as number);
+      if (timerId !== undefined) {
+        self.clearInterval(timerId);
+        intervals.delete(id as number);
+        return ok(undefined);
+      }
+      return err({
+        code: 'INVALID_TIMER_ID' as const,
+        message: `Invalid timer ID: ${id}`,
+      });
+    },
+  };
+
+  // Lifecycle capability
+  const shutdownHandlers: ShutdownHandler[] = [];
+  let isShuttingDown = false;
+
+  const lifecycle: LifecycleCapability = {
+    onShutdown(handler) {
+      shutdownHandlers.push(handler);
+      return () => {
+        const index = shutdownHandlers.indexOf(handler);
+        if (index !== -1) {
+          shutdownHandlers.splice(index, 1);
+        }
+      };
+    },
+    async shutdown() {
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+
+      for (let i = shutdownHandlers.length - 1; i >= 0; i--) {
+        try {
+          await shutdownHandlers[i]();
+        } catch (error) {
+          console.error('Error in shutdown handler:', error);
+        }
+      }
+    },
+  };
+
+  if (captureUncaughtErrors) {
+    self.addEventListener('error', (event) => {
+      console.error('Uncaught error:', event.error);
+    });
+  }
+
+  if (captureUnhandledRejections) {
+    self.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    });
+  }
+
+  // Console capability
+  const consoleCapability: ConsoleCapability = {
+    log(...args) {
+      console.log(...args);
+      return ok(undefined);
+    },
+    info(...args) {
+      console.info(...args);
+      return ok(undefined);
+    },
+    warn(...args) {
+      console.warn(...args);
+      return ok(undefined);
+    },
+    error(...args) {
+      console.error(...args);
+      return ok(undefined);
+    },
+    debug(...args) {
+      console.debug(...args);
+      return ok(undefined);
+    },
+  };
+
+  // HTTP capability
+  const http: HTTPCapability = {
+    async request(url, options = {}) {
+      try {
+        const fetchOptions: RequestInit = {
+          method: options.method || 'GET',
+          headers: options.headers as Record<string, string>,
+          body: options.body,
+        };
+
+        const response = await fetch(url, fetchOptions);
+
+        const headers: Record<string, string> = {};
+        response.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+
+        const httpResponse: HTTPResponse = {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.freeze(headers),
+          ok: response.ok,
+          async text() {
+            try {
+              const text = await response.text();
+              return ok(text);
+            } catch (error: any) {
+              return err({
+                code: 'BODY_READ_ERROR' as const,
+                message: error.message,
+              });
+            }
+          },
+          async json() {
+            try {
+              const json = await response.json();
+              return ok(json);
+            } catch (error: any) {
+              return err({
+                code: 'BODY_READ_ERROR' as const,
+                message: error.message,
+              });
+            }
+          },
+          async arrayBuffer() {
+            try {
+              const buffer = await response.arrayBuffer();
+              return ok(buffer);
+            } catch (error: any) {
+              return err({
+                code: 'BODY_READ_ERROR' as const,
+                message: error.message,
+              });
+            }
+          },
+          async blob() {
+            try {
+              const blob = await response.blob();
+              return ok(blob);
+            } catch (error: any) {
+              return err({
+                code: 'BODY_READ_ERROR' as const,
+                message: error.message,
+              });
+            }
+          },
+        };
+
+        return ok(httpResponse);
+      } catch (error: any) {
+        const httpError: HTTPError = {
+          code: error.name === 'TypeError' ? 'NETWORK_ERROR' :
+                error.name === 'AbortError' ? 'REQUEST_ABORTED' :
+                'REQUEST_FAILED' as const,
+          message: error.message,
+        };
+        return err(httpError);
+      }
+    },
+    async get(url, options) {
+      return this.request(url, { ...options, method: 'GET' });
+    },
+    async post(url, options) {
+      return this.request(url, { ...options, method: 'POST' });
+    },
+    async put(url, options) {
+      return this.request(url, { ...options, method: 'PUT' });
+    },
+    async patch(url, options) {
+      return this.request(url, { ...options, method: 'PATCH' });
+    },
+    async delete(url, options) {
+      return this.request(url, { ...options, method: 'DELETE' });
+    },
+    async head(url, options) {
+      return this.request(url, { ...options, method: 'HEAD' });
+    },
+  };
+
+  // Crypto capability
+  const cryptoCapability: CryptoCapability = {
+    randomBytes(length) {
+      try {
+        const bytes = new Uint8Array(length);
+        crypto.getRandomValues(bytes);
+        return ok(bytes);
+      } catch (error: any) {
+        return err({
+          code: 'OPERATION_FAILED' as const,
+          message: error.message,
+        });
+      }
+    },
+    randomUUID() {
+      try {
+        const uuid = crypto.randomUUID();
+        return ok(uuid);
+      } catch (error: any) {
+        return err({
+          code: 'OPERATION_FAILED' as const,
+          message: error.message,
+        });
+      }
+    },
+    randomInt(min, max) {
+      try {
+        const range = max - min;
+        const randomBytes = new Uint32Array(1);
+        crypto.getRandomValues(randomBytes);
+        const randomValue = randomBytes[0] / (0xffffffff + 1);
+        return ok(Math.floor(randomValue * range) + min);
+      } catch (error: any) {
+        return err({
+          code: 'OPERATION_FAILED' as const,
+          message: error.message,
+        });
+      }
+    },
+    async hash(algorithm, data, encoding = 'hex') {
+      try {
+        const algoMap: Record<HashAlgorithm, string> = {
+          'sha1': 'SHA-1',
+          'sha256': 'SHA-256',
+          'sha384': 'SHA-384',
+          'sha512': 'SHA-512',
+          'md5': 'MD5',
+        };
+
+        if (algorithm === 'md5') {
+          return err({
+            code: 'INVALID_ALGORITHM' as const,
+            message: 'MD5 is not supported in Web Crypto API',
+          });
+        }
+
+        const encoder = new TextEncoder();
+        const dataBuffer = typeof data === 'string' ? encoder.encode(data) : data;
+        const hashBuffer = await crypto.subtle.digest(algoMap[algorithm], dataBuffer);
+        const hashArray = new Uint8Array(hashBuffer);
+
+        if (encoding === 'hex') {
+          const hashHex = Array.from(hashArray)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+          return ok(hashHex);
+        } else {
+          return ok(hashArray);
+        }
+      } catch (error: any) {
+        return err({
+          code: 'OPERATION_FAILED' as const,
+          message: error.message,
+        });
+      }
+    },
+    async hmac(algorithm, key, data, encoding = 'hex') {
+      try {
+        const algoMap: Record<HMACAlgorithm, string> = {
+          'sha1': 'SHA-1',
+          'sha256': 'SHA-256',
+          'sha384': 'SHA-384',
+          'sha512': 'SHA-512',
+        };
+
+        const encoder = new TextEncoder();
+        const keyBuffer = typeof key === 'string' ? encoder.encode(key) : key;
+        const dataBuffer = typeof data === 'string' ? encoder.encode(data) : data;
+
+        const cryptoKey = await crypto.subtle.importKey(
+          'raw',
+          keyBuffer,
+          { name: 'HMAC', hash: algoMap[algorithm] },
+          false,
+          ['sign']
+        );
+
+        const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, dataBuffer);
+        const signatureArray = new Uint8Array(signatureBuffer);
+
+        if (encoding === 'hex') {
+          const signatureHex = Array.from(signatureArray)
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+          return ok(signatureHex);
+        } else {
+          return ok(signatureArray);
+        }
+      } catch (error: any) {
+        return err({
+          code: 'OPERATION_FAILED' as const,
+          message: error.message,
+        });
+      }
+    },
+    timingSafeEqual(a, b) {
+      if (a.length !== b.length) {
+        return ok(false);
+      }
+
+      let result = 0;
+      for (let i = 0; i < a.length; i++) {
+        result |= a[i] ^ b[i];
+      }
+
+      return ok(result === 0);
+    },
+  };
+
+  // Message Port capability (for communication with main thread)
+  const messageHandlers: Array<(event: MessageEvent) => void> = [];
+
+  const messagePort: MessagePortCapability = {
+    postMessage(message, transfer) {
+      try {
+        if (transfer) {
+          self.postMessage(message, transfer);
+        } else {
+          self.postMessage(message);
+        }
+        return ok(undefined);
+      } catch (error: any) {
+        const messageError: MessageError = {
+          code: 'POST_FAILED',
+          message: error.message,
+        };
+        return err(messageError);
+      }
+    },
+    onMessage(handler) {
+      messageHandlers.push(handler);
+
+      const wrappedHandler = (event: MessageEvent) => {
+        handler(event);
+      };
+
+      self.addEventListener('message', wrappedHandler);
+
+      return () => {
+        const index = messageHandlers.indexOf(handler);
+        if (index !== -1) {
+          messageHandlers.splice(index, 1);
+        }
+        self.removeEventListener('message', wrappedHandler);
+      };
+    },
+    close() {
+      self.close();
+    },
+  };
+
+  return {
+    env,
+    time,
+    lifecycle,
+    console: consoleCapability,
+    http,
+    crypto: cryptoCapability,
+    messagePort,
+  };
+}
