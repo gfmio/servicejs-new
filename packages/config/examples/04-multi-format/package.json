@@ -1,0 +1,16 @@
+{
+  "name": "config-multi-format-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/config": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
