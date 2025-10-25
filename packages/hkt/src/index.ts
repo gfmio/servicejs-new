@@ -1,45 +1,46 @@
 /**
  * @servicejs/hkt
  *
- * Higher-Kinded Types foundation for ServiceJS.
+ * Meta-package that re-exports all HKT modules for convenience.
  *
- * This package provides type-level programming infrastructure:
- * - HKTF: Higher-Kinded Type Functions
- * - HKTO: Higher-Kinded Type Objects
- * - Method: Message handlers
- * - Protocol: Reducer protocol helpers
- *
- * All code in this package is type-level only with zero runtime overhead.
+ * For tree-shaking benefits, import from specific packages:
+ * - @servicejs/hkt-core - Core types (HKTF, HKTO, Method, Util)
+ * - @servicejs/hkt-arithmetic - Arithmetic operations
+ * - @servicejs/hkt-boolean - Boolean operations
+ * - @servicejs/hkt-string - String operations
+ * - @servicejs/hkt-tuple - Tuple operations
+ * - @servicejs/hkt-object - Object operations
+ * - @servicejs/hkt-compose - Function composition
+ * - @servicejs/hkt-combinator - HKTO combinators
  *
  * @example
  * ```typescript
- * import { HKTF, HKTO, Method } from '@servicejs/hkt';
+ * // Import from meta-package (includes everything)
+ * import { HKTF, HKTO, Method, ArithmeticHKTF } from '@servicejs/hkt';
  *
- * // Define a method
- * interface IncrementMethod extends Method.Base<
- *   { type: 'increment'; amount: number },
- *   CounterHKTO
- * > {}
- *
- * // Combine methods into HKTO
- * interface CounterHKTO extends HKTO.Combine<readonly [IncrementMethod]> {}
- *
- * // Send a message
- * type Result = HKTO.Send<CounterHKTO, { type: 'increment'; amount: 5 }>;
+ * // Or import from specific packages (better tree-shaking)
+ * import { HKTF } from '@servicejs/hkt-core';
+ * import * as Arithmetic from '@servicejs/hkt-arithmetic';
  * ```
  */
 
-export * as Arithmetic from './arithmetic/index.js';
-export * as Combinator from './combinator/index.js';
-export * as Compose from './compose/index.js';
-export * as Errors from './errors.js';
-export * as FunctionHKTF from './function.js';
-export * as HKTF from './hktf.js';
-export * as HKTO from './hkto.js';
-export * as Method from './method.js';
-export * as ObjectHKTF from './object/index.js';
-export * as Protocol from './protocol.js';
-export * as StringHKTF from './string/index.js';
-export * as TupleHKTF from './tuple/index.js';
-export * as Util from './util/index.js';
+// Re-export core (types and runtime)
+export * as HKTF from "@servicejs/hkt-core";
+export * as HKTO from "@servicejs/hkt-core";
+export * as Method from "@servicejs/hkt-core";
+export * as Util from "@servicejs/hkt-core";
+
+// Re-export domain operations (types and runtime)
+export * as ArithmeticHKTF from "@servicejs/hkt-arithmetic";
+export * as BooleanHKTF from "@servicejs/hkt-boolean";
+export * as StringHKTF from "@servicejs/hkt-string";
+export * as TupleHKTF from "@servicejs/hkt-tuple";
+export * as ObjectHKTF from "@servicejs/hkt-object";
+
+// Re-export composition and combinators (types and runtime)
+export * as Compose from "@servicejs/hkt-compose";
+export * as Combinator from "@servicejs/hkt-combinator";
+
+// Re-export errors from core
+export * from "@servicejs/hkt-core";
 

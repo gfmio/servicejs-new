@@ -1,7 +1,7 @@
 {
-  "name": "@servicejs/hkt",
+  "name": "@servicejs/hkt-core",
   "version": "0.1.0",
-  "description": "Higher-Kinded Types foundation for ServiceJS - Meta-package that re-exports all HKT modules",
+  "description": "Core Higher-Kinded Types infrastructure for ServiceJS",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -26,16 +26,6 @@
     "type-level",
     "typescript"
   ],
-  "dependencies": {
-    "@servicejs/hkt-core": "workspace:*",
-    "@servicejs/hkt-arithmetic": "workspace:*",
-    "@servicejs/hkt-boolean": "workspace:*",
-    "@servicejs/hkt-string": "workspace:*",
-    "@servicejs/hkt-tuple": "workspace:*",
-    "@servicejs/hkt-object": "workspace:*",
-    "@servicejs/hkt-compose": "workspace:*",
-    "@servicejs/hkt-combinator": "workspace:*"
-  },
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.3.0"

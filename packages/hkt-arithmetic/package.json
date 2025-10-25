@@ -1,7 +1,7 @@
 {
-  "name": "@servicejs/hkt",
+  "name": "@servicejs/hkt-arithmetic",
   "version": "0.1.0",
-  "description": "Higher-Kinded Types foundation for ServiceJS - Meta-package that re-exports all HKT modules",
+  "description": "Type-level arithmetic operations for Higher-Kinded Types",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -24,17 +24,12 @@
     "hkt",
     "higher-kinded-types",
     "type-level",
+    "arithmetic",
     "typescript"
   ],
   "dependencies": {
     "@servicejs/hkt-core": "workspace:*",
-    "@servicejs/hkt-arithmetic": "workspace:*",
-    "@servicejs/hkt-boolean": "workspace:*",
-    "@servicejs/hkt-string": "workspace:*",
-    "@servicejs/hkt-tuple": "workspace:*",
-    "@servicejs/hkt-object": "workspace:*",
-    "@servicejs/hkt-compose": "workspace:*",
-    "@servicejs/hkt-combinator": "workspace:*"
+    "ts-arithmetic": "^0.1.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
