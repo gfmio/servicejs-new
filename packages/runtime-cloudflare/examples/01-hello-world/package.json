@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-cloudflare-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "miniflare run src/index.ts",
+    "dev": "miniflare run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-cloudflare": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
