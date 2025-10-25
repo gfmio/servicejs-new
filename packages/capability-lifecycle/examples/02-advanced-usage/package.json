@@ -1,0 +1,14 @@
+{
+  "name": "@servicejs/capability-lifecycle-example-02",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/capability-lifecycle": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
