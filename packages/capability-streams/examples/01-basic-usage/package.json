@@ -1,0 +1,14 @@
+{
+  "name": "@servicejs/capability-streams-example-01",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/capability-streams": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
