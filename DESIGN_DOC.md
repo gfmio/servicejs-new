@@ -580,6 +580,7 @@ type Result = HKTF.Apply<SomeHKTF, { arg: number }>;
 ```
 
 Examples:
+
 - `Some<T>` - Constructor for Option.Some
 - `Ok<T>` - Constructor for Result.Ok
 - Function types as HKTFs
@@ -600,6 +601,7 @@ type Result = HKTO.Send<SomeHKTO, SomeMessage>;
 ```
 
 HKTOs correspond directly to our event-sourced reducer objects:
+
 - Methods = message handlers
 - State captured in type parameters
 - Message dispatch = pattern matching on message type
@@ -751,6 +753,7 @@ type Invalid = HKTO.Send<IdleATM, WithdrawMessage>; // Error!
 5. **Type safety**: Compile-time guarantees prevent entire classes of bugs
 
 **Users don't need to understand HKTs:**
+
 - They use runtime objects (Option, Result, Capability)
 - HKT types are inferred automatically
 - Error messages reference concrete types, not HKTO internals
@@ -2053,6 +2056,638 @@ export const withValidation = <TMsg extends Message>(
   };
 };
 ```
+
+---
+
+## Runtime Environment and Platform Capabilities
+
+### Philosophy
+
+ServiceJS maintains strict capability discipline: components should never directly access ambient authority like `process`, `window`, `Deno`, or other global objects. Instead, runtime features are provided as **explicit capability objects** that are injected into the application root.
+
+This approach provides:
+
+1. **No ambient authority**: All runtime access is explicit
+2. **Platform independence**: Same interface across runtimes (where feasible)
+3. **Testability**: Easy to mock runtime capabilities
+4. **Security**: Can restrict what application components can access
+5. **Portability**: Write once, run anywhere (with graceful degradation)
+
+### Architecture
+
+The runtime system is split into two layers:
+
+1. **Capability packages** (`@servicejs/capability-*`): Define interfaces and provide in-memory/noop implementations
+2. **Runtime packages** (`@servicejs/runtime-*`): Provide platform-specific implementations
+
+This separation allows:
+
+- Testing with mock capabilities
+- Platform-agnostic application code
+- Runtime selection at bootstrap time
+- Gradual capability adoption
+
+### Capability Packages
+
+Each capability package defines:
+
+- TypeScript interfaces for the capability
+- In-memory implementation for testing
+- No-op implementation where appropriate
+- Helper functions and utilities
+
+All operations return `Result<T, E>` - **never throw exceptions**.
+
+#### Environment Capability (@servicejs/capability-env)
+
+Access to environment variables and platform metadata:
+
+```typescript
+import { Result, Option } from '@servicejs/result';
+
+export interface EnvironmentCapability {
+  /**
+   * Get environment variable by key
+   */
+  get(key: string): Option<string>;
+
+  /**
+   * Get all environment variables
+   */
+  getAll(): Record<string, string>;
+
+  /**
+   * Platform identifier
+   */
+  readonly platform: Platform;
+
+  /**
+   * Platform version (e.g., Node.js v20.0.0)
+   */
+  readonly version: string;
+}
+
+export type Platform =
+  | 'node'
+  | 'node-worker'
+  | 'browser'
+  | 'web-worker'
+  | 'shared-worker'
+  | 'service-worker'
+  | 'cloudflare-worker'
+  | 'deno'
+  | 'bun';
+
+// In-memory implementation
+export const createInMemoryEnv = (
+  vars: Record<string, string>,
+  platform: Platform = 'node'
+): EnvironmentCapability => ({
+  get: (key) => key in vars ? Some({ value: vars[key] }) : None(),
+  getAll: () => ({ ...vars }),
+  platform,
+  version: 'in-memory',
+});
+```
+
+#### Time Capability (@servicejs/capability-time)
+
+Time and scheduling operations:
+
+```typescript
+export interface TimeCapability {
+  /**
+   * Get current timestamp (milliseconds since epoch)
+   */
+  now(): number;
+
+  /**
+   * Schedule a callback after delay
+   * Returns cancel function
+   */
+  setTimeout(callback: () => void, ms: number): Result<CancelFn, TimeError>;
+
+  /**
+   * Schedule a recurring callback
+   * Returns cancel function
+   */
+  setInterval(callback: () => void, ms: number): Result<CancelFn, TimeError>;
+
+  /**
+   * High-resolution time (nanoseconds)
+   * For performance measurement
+   */
+  hrtime?(): bigint;
+}
+
+export type CancelFn = () => void;
+
+export interface TimeError {
+  readonly code: 'INVALID_DELAY' | 'CALLBACK_ERROR';
+  readonly message: string;
+}
+
+// Controllable fake time for testing
+export const createFakeTime = (): TimeCapability & {
+  advance(ms: number): void;
+  tick(): void;
+} => {
+  let currentTime = 0;
+  const timers: Array<{ time: number; callback: () => void }> = [];
+
+  return {
+    now: () => currentTime,
+    setTimeout: (callback, ms) => {
+      if (ms < 0) return Err({ code: 'INVALID_DELAY', message: 'Delay must be non-negative' });
+      timers.push({ time: currentTime + ms, callback });
+      return Ok(() => {
+        const index = timers.findIndex(t => t.callback === callback);
+        if (index !== -1) timers.splice(index, 1);
+      });
+    },
+    setInterval: (callback, ms) => {
+      // Similar implementation
+      return Ok(() => {});
+    },
+    advance: (ms) => {
+      currentTime += ms;
+      // Fire pending timers
+    },
+    tick: () => {
+      // Fire all pending timers
+    },
+  };
+};
+```
+
+#### Lifecycle Capability (@servicejs/capability-lifecycle)
+
+Application lifecycle and graceful shutdown:
+
+```typescript
+export interface LifecycleCapability {
+  /**
+   * Register shutdown handler
+   * Returns unregister function
+   */
+  onShutdown(handler: ShutdownHandler): Result<UnregisterFn, LifecycleError>;
+
+  /**
+   * Initiate graceful shutdown
+   */
+  shutdown(reason?: string): Promise<Result<void, ShutdownError>>;
+
+  /**
+   * Get capability for shutdown signals
+   */
+  shutdownSignals(): Capability<ShutdownSignalMessage>;
+}
+
+export type ShutdownHandler = (signal: ShutdownSignal) => Promise<void> | void;
+export type UnregisterFn = () => void;
+
+export interface ShutdownSignal {
+  readonly reason: string;
+  readonly signal?: string; // e.g., 'SIGTERM', 'SIGINT'
+  readonly timestamp: number;
+}
+
+export interface ShutdownSignalMessage extends Message {
+  readonly type: 'shutdown-signal';
+  readonly signal: ShutdownSignal;
+}
+```
+
+#### File System Capability (@servicejs/capability-fs)
+
+File system operations:
+
+```typescript
+export interface FileSystemCapability {
+  /**
+   * Read file contents
+   */
+  readFile(path: string): Promise<Result<Uint8Array, FSError>>;
+
+  /**
+   * Write file contents
+   */
+  writeFile(path: string, data: Uint8Array): Promise<Result<void, FSError>>;
+
+  /**
+   * Check if path exists
+   */
+  exists(path: string): Promise<Result<boolean, FSError>>;
+
+  /**
+   * List directory contents
+   */
+  readdir(path: string): Promise<Result<string[], FSError>>;
+
+  /**
+   * Get file stats
+   */
+  stat(path: string): Promise<Result<FileStats, FSError>>;
+
+  /**
+   * Create directory
+   */
+  mkdir(path: string, options?: { recursive?: boolean }): Promise<Result<void, FSError>>;
+
+  /**
+   * Remove file or directory
+   */
+  remove(path: string, options?: { recursive?: boolean }): Promise<Result<void, FSError>>;
+}
+
+export interface FileStats {
+  readonly size: number;
+  readonly isFile: boolean;
+  readonly isDirectory: boolean;
+  readonly created: number;
+  readonly modified: number;
+}
+
+export interface FSError {
+  readonly code: 'ENOENT' | 'EACCES' | 'EISDIR' | 'ENOTDIR' | 'EEXIST' | 'UNKNOWN';
+  readonly message: string;
+  readonly path: string;
+}
+
+// In-memory file system for testing
+export const createInMemoryFS = (): FileSystemCapability => {
+  const files = new Map<string, Uint8Array>();
+  // Implementation...
+};
+```
+
+#### HTTP Capability (@servicejs/capability-http)
+
+HTTP client operations:
+
+```typescript
+export interface HTTPCapability {
+  /**
+   * Make HTTP request
+   */
+  request(request: HTTPRequest): Promise<Result<HTTPResponse, HTTPError>>;
+
+  /**
+   * Convenience methods
+   */
+  get(url: string, options?: HTTPRequestOptions): Promise<Result<HTTPResponse, HTTPError>>;
+  post(url: string, body: unknown, options?: HTTPRequestOptions): Promise<Result<HTTPResponse, HTTPError>>;
+  put(url: string, body: unknown, options?: HTTPRequestOptions): Promise<Result<HTTPResponse, HTTPError>>;
+  delete(url: string, options?: HTTPRequestOptions): Promise<Result<HTTPResponse, HTTPError>>;
+}
+
+export interface HTTPRequest {
+  readonly url: string;
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+  readonly headers?: Record<string, string>;
+  readonly body?: unknown;
+  readonly timeout?: number;
+}
+
+export interface HTTPResponse {
+  readonly status: number;
+  readonly headers: Record<string, string>;
+  readonly body: Uint8Array;
+}
+
+export interface HTTPError {
+  readonly code: 'TIMEOUT' | 'NETWORK_ERROR' | 'INVALID_URL' | 'ABORTED';
+  readonly message: string;
+}
+
+// Mock HTTP for testing
+export const createMockHTTP = (): HTTPCapability & {
+  addMockResponse(url: string, response: HTTPResponse): void;
+} => {
+  // Implementation...
+};
+```
+
+#### Console Capability (@servicejs/capability-console)
+
+Logging and console output:
+
+```typescript
+export interface ConsoleCapability {
+  /**
+   * Log at various levels
+   */
+  log(message: string, ...args: unknown[]): Result<void, ConsoleError>;
+  info(message: string, ...args: unknown[]): Result<void, ConsoleError>;
+  warn(message: string, ...args: unknown[]): Result<void, ConsoleError>;
+  error(message: string, ...args: unknown[]): Result<void, ConsoleError>;
+  debug(message: string, ...args: unknown[]): Result<void, ConsoleError>;
+}
+
+// Buffered console for testing
+export const createBufferedConsole = (): ConsoleCapability & {
+  getLogs(): Array<{ level: string; message: string; args: unknown[] }>;
+  clear(): void;
+} => {
+  // Implementation...
+};
+
+// No-op console (silent)
+export const createNoOpConsole = (): ConsoleCapability => {
+  const noop = () => Ok(undefined);
+  return { log: noop, info: noop, warn: noop, error: noop, debug: noop };
+};
+```
+
+#### Streams Capability (@servicejs/capability-streams)
+
+Standard streams (stdin/stdout/stderr):
+
+```typescript
+export interface StreamsCapability {
+  readonly stdin?: ReadableStreamCapability;
+  readonly stdout?: WritableStreamCapability;
+  readonly stderr?: WritableStreamCapability;
+}
+
+export interface ReadableStreamCapability {
+  read(size?: number): Promise<Result<Uint8Array, StreamError>>;
+  close(): Promise<Result<void, StreamError>>;
+}
+
+export interface WritableStreamCapability {
+  write(data: Uint8Array): Promise<Result<void, StreamError>>;
+  flush(): Promise<Result<void, StreamError>>;
+  close(): Promise<Result<void, StreamError>>;
+}
+
+export interface StreamError {
+  readonly code: 'CLOSED' | 'EOF' | 'WRITE_ERROR' | 'READ_ERROR';
+  readonly message: string;
+}
+```
+
+#### Crypto Capability (@servicejs/capability-crypto)
+
+Cryptographic operations:
+
+```typescript
+export interface CryptoCapability {
+  /**
+   * Generate random bytes
+   */
+  randomBytes(size: number): Result<Uint8Array, CryptoError>;
+
+  /**
+   * Generate random UUID (v4)
+   */
+  randomUUID(): Result<string, CryptoError>;
+
+  /**
+   * Hash data
+   */
+  hash(algorithm: HashAlgorithm, data: Uint8Array): Promise<Result<Uint8Array, CryptoError>>;
+
+  /**
+   * HMAC
+   */
+  hmac(algorithm: HashAlgorithm, key: Uint8Array, data: Uint8Array): Promise<Result<Uint8Array, CryptoError>>;
+}
+
+export type HashAlgorithm = 'sha256' | 'sha512';
+
+export interface CryptoError {
+  readonly code: 'UNSUPPORTED_ALGORITHM' | 'INVALID_SIZE' | 'CRYPTO_ERROR';
+  readonly message: string;
+}
+```
+
+### Runtime Packages
+
+Each runtime package provides platform-specific implementations of capabilities and a `bootstrap` function:
+
+#### Node.js Runtime (@servicejs/runtime-node)
+
+```typescript
+export interface NodeRuntimeCapabilities {
+  readonly env: EnvironmentCapability;
+  readonly time: TimeCapability;
+  readonly lifecycle: LifecycleCapability;
+  readonly fs: FileSystemCapability;
+  readonly http: HTTPCapability;
+  readonly console: ConsoleCapability;
+  readonly streams: StreamsCapability;
+  readonly crypto: CryptoCapability;
+  readonly process: NodeProcessCapability;
+}
+
+export interface NodeProcessCapability {
+  readonly pid: number;
+  readonly ppid: number;
+  readonly argv: readonly string[];
+  readonly cwd: string;
+  readonly platform: string;
+  readonly arch: string;
+  exit(code: number): never;
+  chdir(directory: string): Result<void, ProcessError>;
+}
+
+export interface NodeBootstrapOptions {
+  captureShutdownSignals?: boolean;
+  signals?: Partial<Record<NodeJS.Signals, boolean>>;
+  captureUncaughtErrors?: boolean;
+  captureUnhandledRejections?: boolean;
+}
+
+export function bootstrap(
+  options?: NodeBootstrapOptions
+): NodeRuntimeCapabilities {
+  // Implementation wraps Node.js globals
+}
+```
+
+#### Browser Runtime (@servicejs/runtime-browser)
+
+```typescript
+export interface BrowserRuntimeCapabilities {
+  readonly env: EnvironmentCapability;
+  readonly time: TimeCapability;
+  readonly lifecycle: LifecycleCapability;
+  readonly http: HTTPCapability; // Uses fetch
+  readonly console: ConsoleCapability;
+  readonly crypto: CryptoCapability; // Uses Web Crypto API
+  readonly window: WindowCapability;
+  readonly storage?: StorageCapability;
+}
+
+export interface WindowCapability {
+  readonly location: LocationInfo;
+  readonly dimensions: { width: number; height: number };
+  readonly userAgent: string;
+}
+
+export interface StorageCapability {
+  get(key: string): Result<Option<string>, StorageError>;
+  set(key: string, value: string): Result<void, StorageError>;
+  remove(key: string): Result<void, StorageError>;
+  clear(): Result<void, StorageError>;
+}
+
+export function bootstrap(
+  options?: BrowserBootstrapOptions
+): BrowserRuntimeCapabilities {
+  // Implementation wraps browser globals
+}
+```
+
+#### Other Runtime Packages
+
+- **@servicejs/runtime-node-worker**: Worker thread runtime (uses `parentPort`)
+- **@servicejs/runtime-web-worker**: Web Worker runtime (uses `self`)
+- **@servicejs/runtime-shared-worker**: Shared Worker runtime
+- **@servicejs/runtime-service-worker**: Service Worker runtime (adds caches, fetch interception)
+- **@servicejs/runtime-cloudflare**: Cloudflare Workers (per-request lifecycle, KV/R2/Durable Objects)
+- **@servicejs/runtime-deno**: Deno runtime (uses `Deno` namespace)
+
+### Usage Pattern
+
+#### Bootstrap and Inject
+
+```typescript
+// main.ts (Node.js)
+import { bootstrap } from '@servicejs/runtime-node';
+import { createApp } from './app.js';
+
+// Bootstrap runtime
+const runtime = bootstrap({
+  captureShutdownSignals: true,
+  captureUncaughtErrors: true,
+});
+
+// Create and start app with injected capabilities
+const app = createApp({
+  env: runtime.env,
+  time: runtime.time,
+  lifecycle: runtime.lifecycle,
+  fs: runtime.fs,
+  http: runtime.http,
+  console: runtime.console,
+});
+
+// Register shutdown handler
+runtime.lifecycle.onShutdown(async (signal) => {
+  runtime.console.log('Shutting down...', { reason: signal.reason });
+  await app.shutdown();
+  runtime.console.log('Shutdown complete');
+});
+
+// Start app
+await app.start();
+```
+
+#### Application Code (Platform-Independent)
+
+```typescript
+// app.ts
+import type { EnvironmentCapability, HTTPCapability } from '@servicejs/capability-env';
+import type { HTTPCapability } from '@servicejs/capability-http';
+
+export interface AppDependencies {
+  readonly env: EnvironmentCapability;
+  readonly http: HTTPCapability;
+  // ... other capabilities
+}
+
+export function createApp(deps: AppDependencies) {
+  // Application only sees capability interfaces
+  // No direct access to process, window, etc.
+
+  const apiUrl = deps.env.get('API_URL').unwrapOr('http://localhost:3000');
+
+  return {
+    async start() {
+      const response = await deps.http.get(apiUrl);
+      // Handle response...
+    },
+    async shutdown() {
+      // Cleanup...
+    },
+  };
+}
+```
+
+#### Testing with Mock Capabilities
+
+```typescript
+// app.test.ts
+import { createApp } from './app.js';
+import { createInMemoryEnv } from '@servicejs/capability-env';
+import { createMockHTTP } from '@servicejs/capability-http';
+
+test('app fetches from API', async () => {
+  const mockEnv = createInMemoryEnv({ API_URL: 'http://test.local' });
+  const mockHTTP = createMockHTTP();
+
+  mockHTTP.addMockResponse('http://test.local', {
+    status: 200,
+    headers: {},
+    body: new TextEncoder().encode('{"ok": true}'),
+  });
+
+  const app = createApp({ env: mockEnv, http: mockHTTP });
+  await app.start();
+
+  // Assert...
+});
+```
+
+### Platform-Specific Features
+
+When platform-specific features are needed, use type guards:
+
+```typescript
+import type { NodeRuntimeCapabilities } from '@servicejs/runtime-node';
+
+function hasNodeProcess(
+  runtime: unknown
+): runtime is NodeRuntimeCapabilities {
+  return (runtime as NodeRuntimeCapabilities).process !== undefined;
+}
+
+function main(runtime: RuntimeCapabilities) {
+  // Common code works everywhere
+  const apiKey = runtime.env.get('API_KEY');
+
+  // Platform-specific code
+  if (hasNodeProcess(runtime)) {
+    console.log('Running in Node.js, PID:', runtime.process.pid);
+
+    // Use Node-specific filesystem
+    const config = await runtime.fs.readFile('./config.json');
+  }
+}
+```
+
+### Benefits
+
+1. **Testability**: Mock capabilities trivially
+2. **Security**: Explicit capability grants
+3. **Portability**: Platform-agnostic application code
+4. **Type Safety**: TypeScript enforces capability interfaces
+5. **Graceful Degradation**: Optional capabilities with type guards
+6. **No Ambient Authority**: All runtime access explicit
+
+### Trade-offs
+
+1. **Verbosity**: Must pass capabilities explicitly
+2. **Bootstrap Overhead**: Initial setup more complex
+3. **Learning Curve**: Different from direct global access
+
+**Mitigation**:
+
+- Helper factories reduce boilerplate
+- Documentation provides clear patterns
+- Type safety catches errors early
 
 ---
 

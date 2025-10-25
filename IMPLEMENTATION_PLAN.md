@@ -2185,6 +2185,458 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ---
 
+## Milestone 13: Runtime Environment and Platform Capabilities
+
+**Goal:** Implement capability-based runtime environment abstractions for all major platforms, eliminating ambient authority and enabling platform-agnostic application code.
+
+**Estimated Effort:** 10-12 days
+
+### 13.1 Capability Package: Environment (@servicejs/capability-env)
+
+- [ ] **Define environment capability interface**
+  - Define `EnvironmentCapability` interface
+  - Define `Platform` union type
+  - Define error types
+  - Notes: Read-only access to environment variables
+
+- [ ] **Implement in-memory environment**
+  - Create `createInMemoryEnv` factory
+  - Accept vars map and platform
+  - Implement get/getAll methods
+  - Notes: For testing
+
+- [ ] **Write tests for environment capability**
+  - Test get returns Some when key exists
+  - Test get returns None when key missing
+  - Test getAll returns all variables
+  - Test platform identifier
+  - Notes: Comprehensive coverage
+
+- [ ] **Write environment capability documentation**
+  - Document interface and usage
+  - Add examples for testing
+  - Notes: Clear API docs
+
+### 13.2 Capability Package: Time (@servicejs/capability-time)
+
+- [ ] **Define time capability interface**
+  - Define `TimeCapability` interface
+  - Define `TimeError` type
+  - Support now(), setTimeout, setInterval, hrtime
+  - Notes: Return Result, never throw
+
+- [ ] **Implement fake time**
+  - Create `createFakeTime` factory
+  - Support controllable time advancement
+  - Implement timer queue with sorting
+  - Support tick() and advance(ms)
+  - Notes: For deterministic testing
+
+- [ ] **Implement no-op time**
+  - All timers are no-ops
+  - Now() returns fixed time
+  - Notes: For tests that don't need time
+
+- [ ] **Write tests for time capability**
+  - Test setTimeout schedules correctly
+  - Test setInterval recurs
+  - Test cancel functions work
+  - Test fake time advancement
+  - Test timer ordering
+  - Notes: Test both real and fake implementations
+
+- [ ] **Write time capability documentation**
+  - Document interface
+  - Add fake time examples
+  - Notes: Deterministic testing guide
+
+### 13.3 Capability Package: Lifecycle (@servicejs/capability-lifecycle)
+
+- [ ] **Define lifecycle capability interface**
+  - Define `LifecycleCapability` interface
+  - Define `ShutdownSignal` type
+  - Define `ShutdownHandler` type
+  - Define `ShutdownSignalMessage` message type
+  - Notes: Graceful shutdown coordination
+
+- [ ] **Implement in-memory lifecycle**
+  - Create `createInMemoryLifecycle` factory
+  - Track shutdown handlers
+  - Implement onShutdown registration
+  - Implement shutdown execution
+  - Support shutdown signals capability
+  - Notes: For testing
+
+- [ ] **Write tests for lifecycle capability**
+  - Test onShutdown registers handlers
+  - Test shutdown calls handlers in reverse order
+  - Test shutdown signals emitted
+  - Test unregister works
+  - Notes: Test handler execution
+
+- [ ] **Write lifecycle capability documentation**
+  - Document interface
+  - Add shutdown coordination examples
+  - Notes: Graceful shutdown patterns
+
+### 13.4 Capability Package: File System (@servicejs/capability-fs)
+
+- [ ] **Define file system capability interface**
+  - Define `FileSystemCapability` interface
+  - Define `FileStats` type
+  - Define `FSError` type with standard codes
+  - Support readFile, writeFile, exists, readdir, stat, mkdir, remove
+  - Notes: All operations return Result
+
+- [ ] **Implement in-memory file system**
+  - Create `createInMemoryFS` factory
+  - Use Map for file storage
+  - Implement directory tree structure
+  - Support all CRUD operations
+  - Notes: Fast, deterministic testing
+
+- [ ] **Implement no-op file system**
+  - All operations return errors
+  - Notes: For tests that shouldn't touch FS
+
+- [ ] **Write tests for file system capability**
+  - Test readFile success and ENOENT
+  - Test writeFile creates/updates
+  - Test mkdir with recursive option
+  - Test readdir lists files
+  - Test remove deletes files/dirs
+  - Test stat returns metadata
+  - Notes: Comprehensive FS operations
+
+- [ ] **Write file system capability documentation**
+  - Document interface
+  - Add in-memory FS examples
+  - Notes: Testing patterns
+
+### 13.5 Capability Package: HTTP (@servicejs/capability-http)
+
+- [ ] **Define HTTP capability interface**
+  - Define `HTTPCapability` interface
+  - Define `HTTPRequest` type
+  - Define `HTTPResponse` type
+  - Define `HTTPError` type
+  - Support request, get, post, put, delete methods
+  - Notes: All operations return Result
+
+- [ ] **Implement mock HTTP client**
+  - Create `createMockHTTP` factory
+  - Store mock responses by URL
+  - Match requests to responses
+  - Support wildcard/regex matching
+  - Notes: Powerful testing tool
+
+- [ ] **Implement no-op HTTP client**
+  - All requests return errors
+  - Notes: For tests that shouldn't make requests
+
+- [ ] **Write tests for HTTP capability**
+  - Test request makes HTTP call
+  - Test get/post/put/delete convenience methods
+  - Test mock HTTP matches responses
+  - Test timeout errors
+  - Test network errors
+  - Notes: Mock-based testing
+
+- [ ] **Write HTTP capability documentation**
+  - Document interface
+  - Add mock HTTP examples
+  - Notes: API testing patterns
+
+### 13.6 Capability Package: Console (@servicejs/capability-console)
+
+- [ ] **Define console capability interface**
+  - Define `ConsoleCapability` interface
+  - Define `ConsoleError` type
+  - Support log, info, warn, error, debug methods
+  - Notes: All operations return Result
+
+- [ ] **Implement buffered console**
+  - Create `createBufferedConsole` factory
+  - Store log messages in array
+  - Support getLogs() and clear()
+  - Notes: Test assertions on logs
+
+- [ ] **Implement no-op console**
+  - Create `createNoOpConsole` factory
+  - All operations are no-ops
+  - Notes: Silent testing
+
+- [ ] **Write tests for console capability**
+  - Test log stores messages
+  - Test each log level
+  - Test getLogs returns messages
+  - Test clear empties buffer
+  - Notes: Buffered console testing
+
+- [ ] **Write console capability documentation**
+  - Document interface
+  - Add testing examples
+  - Notes: Log capture patterns
+
+### 13.7 Capability Package: Streams (@servicejs/capability-streams)
+
+- [ ] **Define streams capability interface**
+  - Define `StreamsCapability` interface
+  - Define `ReadableStreamCapability` interface
+  - Define `WritableStreamCapability` interface
+  - Define `StreamError` type
+  - Notes: stdin/stdout/stderr abstraction
+
+- [ ] **Implement in-memory streams**
+  - Create `createInMemoryStreams` factory
+  - Use Uint8Array buffers
+  - Support read/write operations
+  - Notes: Testing I/O
+
+- [ ] **Write tests for streams capability**
+  - Test read from readable stream
+  - Test write to writable stream
+  - Test close operations
+  - Test EOF handling
+  - Notes: Stream operations
+
+- [ ] **Write streams capability documentation**
+  - Document interface
+  - Add testing examples
+  - Notes: I/O patterns
+
+### 13.8 Capability Package: Crypto (@servicejs/capability-crypto)
+
+- [ ] **Define crypto capability interface**
+  - Define `CryptoCapability` interface
+  - Define `HashAlgorithm` type
+  - Define `CryptoError` type
+  - Support randomBytes, randomUUID, hash, hmac
+  - Notes: Cryptographic operations
+
+- [ ] **Implement deterministic crypto**
+  - Create `createDeterministicCrypto` factory
+  - Use seedable PRNG for testing
+  - Support all hash algorithms
+  - Notes: Reproducible tests
+
+- [ ] **Write tests for crypto capability**
+  - Test randomBytes generates bytes
+  - Test randomUUID generates valid UUIDs
+  - Test hash produces correct hashes
+  - Test hmac produces correct MACs
+  - Test deterministic crypto is reproducible
+  - Notes: Crypto operations
+
+- [ ] **Write crypto capability documentation**
+  - Document interface
+  - Add deterministic crypto examples
+  - Notes: Testing with crypto
+
+### 13.9 Runtime Package: Node.js (@servicejs/runtime-node)
+
+- [ ] **Define Node.js runtime capabilities**
+  - Define `NodeRuntimeCapabilities` interface
+  - Define `NodeProcessCapability` interface
+  - Define `NodeBootstrapOptions` interface
+  - Notes: Extends all capability interfaces
+
+- [ ] **Implement bootstrap function**
+  - Create `bootstrap` function
+  - Wrap process.env for env capability
+  - Wrap timers for time capability
+  - Set up process signal handlers
+  - Wrap fs promises for file system
+  - Wrap fetch/http for HTTP
+  - Wrap console for console capability
+  - Wrap stdin/stdout/stderr for streams
+  - Wrap crypto for crypto capability
+  - Expose process metadata
+  - Notes: Complete Node.js integration
+
+- [ ] **Implement signal handling**
+  - Capture SIGTERM, SIGINT, SIGUSR2
+  - Convert to shutdown signals
+  - Support graceful shutdown
+  - Notes: Production-ready shutdown
+
+- [ ] **Implement error handling**
+  - Capture uncaughtException
+  - Capture unhandledRejection
+  - Trigger shutdown on errors
+  - Notes: Error recovery
+
+- [ ] **Write tests for Node.js runtime**
+  - Test bootstrap creates all capabilities
+  - Test signal handlers work
+  - Test error handlers work
+  - Test shutdown coordination
+  - Notes: Integration tests
+
+- [ ] **Write Node.js runtime documentation**
+  - Document bootstrap options
+  - Add usage examples
+  - Add shutdown examples
+  - Notes: Complete guide
+
+### 13.10 Runtime Package: Browser (@servicejs/runtime-browser)
+
+- [ ] **Define browser runtime capabilities**
+  - Define `BrowserRuntimeCapabilities` interface
+  - Define `WindowCapability` interface
+  - Define `StorageCapability` interface
+  - Define `BrowserBootstrapOptions` interface
+  - Notes: Browser-specific features
+
+- [ ] **Implement bootstrap function**
+  - Create `bootstrap` function
+  - Use empty env (browsers don't have env vars)
+  - Wrap timers for time capability
+  - Set up beforeunload for shutdown
+  - Wrap fetch for HTTP
+  - Wrap console for console capability
+  - Wrap Web Crypto API for crypto
+  - Expose window metadata
+  - Wrap localStorage/sessionStorage
+  - Notes: Browser integration
+
+- [ ] **Implement lifecycle handling**
+  - Use beforeunload event
+  - Support graceful shutdown
+  - Notes: Browser lifecycle
+
+- [ ] **Write tests for browser runtime**
+  - Test bootstrap creates capabilities
+  - Test lifecycle handlers
+  - Test storage operations
+  - Notes: jsdom or similar for testing
+
+- [ ] **Write browser runtime documentation**
+  - Document bootstrap
+  - Add usage examples
+  - Notes: Browser patterns
+
+### 13.11 Runtime Package: Workers (@servicejs/runtime-*-worker)
+
+- [ ] **Implement Node.js worker runtime (@servicejs/runtime-node-worker)**
+  - Similar to runtime-node but uses parentPort
+  - Support worker_threads communication
+  - Notes: Worker thread isolation
+
+- [ ] **Implement Web Worker runtime (@servicejs/runtime-web-worker)**
+  - Similar to runtime-browser but uses self
+  - No DOM access
+  - Notes: Web Worker environment
+
+- [ ] **Implement Shared Worker runtime (@servicejs/runtime-shared-worker)**
+  - Multiple connection support
+  - Port-based communication
+  - Notes: Shared Worker specifics
+
+- [ ] **Implement Service Worker runtime (@servicejs/runtime-service-worker)**
+  - Add caches capability
+  - Add fetch interception capability
+  - Notes: Service Worker features
+
+- [ ] **Write tests for worker runtimes**
+  - Test each worker runtime
+  - Test communication patterns
+  - Notes: Worker-specific tests
+
+- [ ] **Write worker runtime documentation**
+  - Document each runtime
+  - Add usage examples
+  - Notes: Worker patterns
+
+### 13.12 Runtime Package: Edge and Alternative Runtimes
+
+- [ ] **Implement Cloudflare Workers runtime (@servicejs/runtime-cloudflare)**
+  - Per-request lifecycle model
+  - Wrap env bindings (KV, R2, DO)
+  - No traditional shutdown
+  - Notes: Edge runtime specifics
+
+- [ ] **Implement Deno runtime (@servicejs/runtime-deno)**
+  - Similar to Node.js but uses Deno namespace
+  - Wrap Deno.env for environment
+  - Wrap Deno.* APIs
+  - Notes: Deno-specific features
+
+- [ ] **Implement Bun runtime (@servicejs/runtime-bun)**
+  - If different from Node.js
+  - Wrap Bun-specific APIs
+  - Notes: Only if needed
+
+- [ ] **Write tests for edge runtimes**
+  - Test Cloudflare Workers
+  - Test Deno runtime
+  - Test Bun runtime (if applicable)
+  - Notes: Edge-specific tests
+
+- [ ] **Write edge runtime documentation**
+  - Document each runtime
+  - Add deployment examples
+  - Notes: Edge deployment guide
+
+### 13.13 Integration and Examples
+
+- [ ] **Create platform-agnostic example app**
+  - Write app using only capability interfaces
+  - Run on Node.js
+  - Run in browser
+  - Run in Deno
+  - Notes: Demonstrate portability
+
+- [ ] **Create testing guide**
+  - Show how to test with mock capabilities
+  - Show fake time usage
+  - Show in-memory FS usage
+  - Notes: Testing best practices
+
+- [ ] **Create migration guide**
+  - From direct global access to capabilities
+  - Show refactoring patterns
+  - Notes: Adoption guide
+
+- [ ] **Write comprehensive runtime documentation**
+  - Overview of runtime system
+  - Capability vs runtime packages
+  - Platform selection guide
+  - Testing strategies
+  - Notes: Complete runtime docs
+
+### 13.14 Package Configuration
+
+- [ ] **Create package.json for all capability packages**
+  - @servicejs/capability-env
+  - @servicejs/capability-time
+  - @servicejs/capability-lifecycle
+  - @servicejs/capability-fs
+  - @servicejs/capability-http
+  - @servicejs/capability-console
+  - @servicejs/capability-streams
+  - @servicejs/capability-crypto
+  - Notes: Consistent package structure
+
+- [ ] **Create package.json for all runtime packages**
+  - @servicejs/runtime-node
+  - @servicejs/runtime-node-worker
+  - @servicejs/runtime-browser
+  - @servicejs/runtime-web-worker
+  - @servicejs/runtime-shared-worker
+  - @servicejs/runtime-service-worker
+  - @servicejs/runtime-cloudflare
+  - @servicejs/runtime-deno
+  - Notes: Platform-specific dependencies
+
+- [ ] **Set up build configuration**
+  - Configure tsup for each package
+  - Set up TypeScript configs
+  - Configure exports
+  - Notes: Build pipeline
+
+---
+
 ## Ongoing Tasks
 
 ### Documentation
@@ -2252,6 +2704,7 @@ This implementation plan covers:
 - **Ongoing maintenance tasks**
 
 The plan is designed to be:
+
 - **Incremental**: Each milestone builds on previous
 - **Testable**: Every feature has tests
 - **Documented**: Every component has docs
