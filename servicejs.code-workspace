@@ -1,0 +1,74 @@
+{
+    "extensions": {},
+    "folders": [
+        { "name": "root", "path": "." },
+        { "name": "capability-console", "path": "packages/capability-console" },
+        { "name": "capability-crypto", "path": "packages/capability-crypto" },
+        { "name": "capability-env", "path": "packages/capability-env" },
+        { "name": "capability-fs", "path": "packages/capability-fs" },
+        { "name": "capability-http", "path": "packages/capability-http" },
+        { "name": "capability-lifecycle", "path": "packages/capability-lifecycle" },
+        { "name": "capability-streams", "path": "packages/capability-streams" },
+        { "name": "capability-time", "path": "packages/capability-time" },
+        { "name": "either", "path": "packages/either" },
+        { "name": "hkt", "path": "packages/hkt" },
+        { "name": "hkt-arithmetic", "path": "packages/hkt-arithmetic" },
+        { "name": "hkt-boolean", "path": "packages/hkt-boolean" },
+        { "name": "hkt-combinator", "path": "packages/hkt-combinator" },
+        { "name": "hkt-compose", "path": "packages/hkt-compose" },
+        { "name": "hkt-core", "path": "packages/hkt-core" },
+        { "name": "hkt-object", "path": "packages/hkt-object" },
+        { "name": "hkt-string", "path": "packages/hkt-string" },
+        { "name": "hkt-tuple", "path": "packages/hkt-tuple" },
+        { "name": "option", "path": "packages/option" },
+        { "name": "pure", "path": "packages/pure" },
+        { "name": "result", "path": "packages/result" },
+        { "name": "runtime-browser", "path": "packages/runtime-browser" },
+        { "name": "runtime-bun", "path": "packages/runtime-bun" },
+        { "name": "runtime-cloudflare", "path": "packages/runtime-cloudflare" },
+        { "name": "runtime-deno", "path": "packages/runtime-deno" },
+        { "name": "runtime-electron", "path": "packages/runtime-electron" },
+        { "name": "runtime-node", "path": "packages/runtime-node" },
+        { "name": "runtime-react-native", "path": "packages/runtime-react-native" },
+        { "name": "runtime-service-worker", "path": "packages/runtime-service-worker" },
+        { "name": "runtime-shared-worker", "path": "packages/runtime-shared-worker" },
+        { "name": "runtime-tauri", "path": "packages/runtime-tauri" },
+        { "name": "runtime-web-worker", "path": "packages/runtime-web-worker" },
+    ],
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [],
+        "compounds": []
+    },
+    "mcp": {
+        "inputs": [],
+        "servers": {
+            "mcp-server-time": {
+                "command": "uvx",
+                "args": [
+                    "mcp_server_time",
+                    "--local-timezone=America/Los_Angeles"
+                ]
+            }
+        }
+    },
+    "settings": {},
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "My Task",
+                "command": "echo hello",
+                "type": "shell",
+                "args": [],
+                "problemMatcher": [
+                    "$tsc"
+                ],
+                "presentation": {
+                    "reveal": "always"
+                },
+                "group": "build"
+            }
+        ]
+    }
+}
