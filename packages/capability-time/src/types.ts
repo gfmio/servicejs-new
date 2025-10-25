@@ -15,10 +15,16 @@ import type { Result } from '@servicejs/result';
 export type CancelFn = () => void;
 
 /**
+ * Opaque timer identifier
+ * Used for clearTimeout and clearInterval
+ */
+export type TimerId = number & { readonly __brand: 'TimerId' };
+
+/**
  * Time operation errors
  */
 export interface TimeError {
-  readonly code: 'INVALID_DELAY' | 'CALLBACK_ERROR' | 'ALREADY_CANCELLED';
+  readonly code: 'INVALID_DELAY' | 'CALLBACK_ERROR' | 'ALREADY_CANCELLED' | 'INVALID_TIMER_ID' | 'TIMER_FAILED';
   readonly message: string;
 }
 
@@ -126,6 +132,51 @@ export interface TimeCapability {
    * ```
    */
   hrtime?(): bigint;
+
+  /**
+   * High-resolution time (milliseconds with decimal precision)
+   *
+   * Alternative to hrtime() that returns milliseconds with sub-millisecond precision.
+   * More portable than hrtime() - works in browsers and workers.
+   *
+   * @returns Option<number> containing milliseconds since time origin, or None if not supported
+   *
+   * @example
+   * ```typescript
+   * import { isSome } from '@servicejs/option';
+   *
+   * const start = time.highResolutionTime();
+   * if (isSome(start)) {
+   *   // ... do work ...
+   *   const end = time.highResolutionTime();
+   *   if (isSome(end)) {
+   *     const elapsed = end.value - start.value;
+   *     console.log(`Took ${elapsed}ms`);
+   *   }
+   * }
+   * ```
+   */
+  highResolutionTime?(): import('@servicejs/option').Option<number>;
+
+  /**
+   * Clear a timeout created with setTimeout
+   *
+   * Alternative API for platforms that use timer IDs instead of cancel functions.
+   *
+   * @param id - Timer ID returned from setTimeout
+   * @returns Ok(void) or Err(error)
+   */
+  clearTimeout?(id: TimerId): Result<void, TimeError>;
+
+  /**
+   * Clear an interval created with setInterval
+   *
+   * Alternative API for platforms that use timer IDs instead of cancel functions.
+   *
+   * @param id - Timer ID returned from setInterval
+   * @returns Ok(void) or Err(error)
+   */
+  clearInterval?(id: TimerId): Result<void, TimeError>;
 }
 
 /**

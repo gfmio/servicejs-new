@@ -6,5 +6,5 @@
  * @packageDocumentation
  */
 
-export type { TimeCapability, TimeError, CancelFn, FakeTimeCapability } from './types.js';
+export type { TimeCapability, TimeError, CancelFn, TimerId, FakeTimeCapability } from './types.js';
 export { createFakeTime, createNoOpTime } from './fake.js';

@@ -27,6 +27,7 @@ export type {
   FSError,
   FSErrorCode,
   FileStats,
+  FileStat,
   DirectoryEntry,
   ReadFileOptions,
   WriteFileOptions,

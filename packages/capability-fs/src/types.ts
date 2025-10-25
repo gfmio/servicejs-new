@@ -46,6 +46,11 @@ export interface FileStats {
 }
 
 /**
+ * Alias for FileStats (for compatibility)
+ */
+export type FileStat = FileStats;
+
+/**
  * Directory entry.
  */
 export interface DirectoryEntry {

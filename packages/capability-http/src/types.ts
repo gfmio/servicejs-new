@@ -30,6 +30,9 @@ export type HTTPErrorCode =
   | 'INVALID_REQUEST' // Invalid request configuration
   | 'INVALID_RESPONSE' // Invalid response (e.g., unparseable body)
   | 'ABORTED' // Request was aborted
+  | 'REQUEST_ABORTED' // Request was aborted (alias for ABORTED)
+  | 'REQUEST_FAILED' // Request failed for unknown reason
+  | 'BODY_READ_ERROR' // Failed to read response body
   | 'UNKNOWN'; // Unknown error
 
 /**

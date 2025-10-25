@@ -24,6 +24,11 @@ export type Platform =
   | 'cloudflare-worker'
   | 'deno'
   | 'bun'
+  | 'react-native'
+  | 'electron-main'
+  | 'electron-renderer'
+  | 'electron-preload'
+  | 'tauri'
   | 'test'; // For testing environments
 
 /**
@@ -80,8 +85,9 @@ export interface EnvironmentCapability {
    * Platform identifier
    *
    * Identifies which runtime environment this capability represents.
+   * Can be either a property or a function for compatibility.
    */
-  readonly platform: Platform;
+  readonly platform: Platform | (() => Platform);
 
   /**
    * Platform version string
@@ -91,6 +97,8 @@ export interface EnvironmentCapability {
    * - Deno: Deno.version.deno (e.g., "1.40.0")
    * - Browser: navigator.userAgent
    * - In-memory/test: "in-memory" or "test"
+   *
+   * Can be either a property or a function for compatibility.
    */
-  readonly version: string;
+  readonly version: string | (() => string);
 }
