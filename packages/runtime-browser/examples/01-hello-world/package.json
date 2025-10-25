@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-browser-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "playwright run src/index.ts",
+    "dev": "playwright run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-browser": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}
