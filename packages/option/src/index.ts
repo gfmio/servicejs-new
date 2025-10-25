@@ -55,3 +55,17 @@ export {
   zip,
   zipWith,
 } from './option.js';
+
+export {
+  firstSome,
+  filterMap,
+  sequence,
+  traverse,
+  collectSome,
+  findSome,
+  liftPredicate,
+  optionWhen,
+  flatten,
+  map2,
+  map3,
+} from './utilities.js';
