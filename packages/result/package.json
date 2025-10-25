@@ -29,7 +29,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@servicejs/hkt": "workspace:*"
+    "@servicejs/hkt": "workspace:*",
+    "@servicejs/option": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
