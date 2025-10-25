@@ -1,7 +1,7 @@
 # ServiceJS Design Document
 
 **Version:** 0.1.0
-**Status:** Phase 1 Complete - HKT Foundation, Type Utilities, and Runtime Capabilities Implemented
+**Status:** Phase 2 Complete - Core Framework, Mailboxes, and Communication Patterns Implemented
 **Last Updated:** 2025-10-25
 **Authors:** gfmio, Claude
 
