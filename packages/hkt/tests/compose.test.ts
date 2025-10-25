@@ -265,4 +265,292 @@ describe('Compose', () => {
       expect(result).toBe(42);
     });
   });
+
+  describe('Flip', () => {
+    it('should reverse composition order', () => {
+      // Flip reverses f and g, so g is applied first
+      type Result = HKTF.Apply<
+        Compose.Flip,
+        { f: Compose.Identity; g: Compose.Identity; input: 'test' }
+      >;
+
+      const result: Result = 'test';
+      expect(result).toBe('test');
+    });
+
+    it('should work with different types', () => {
+      type Result = HKTF.Apply<
+        Compose.Flip,
+        { f: Compose.Identity; g: Compose.Identity; input: 42 }
+      >;
+
+      const result: Result = 42;
+      expect(result).toBe(42);
+    });
+  });
+
+  describe('Apply', () => {
+    it('should apply HKTF to value', () => {
+      type Result = HKTF.Apply<
+        Compose.Apply,
+        { fn: Compose.Identity; input: 'hello' }
+      >;
+
+      const result: Result = 'hello';
+      expect(result).toBe('hello');
+    });
+
+    it('should work with numbers', () => {
+      type Result = HKTF.Apply<
+        Compose.Apply,
+        { fn: Compose.Identity; input: 123 }
+      >;
+
+      const result: Result = 123;
+      expect(result).toBe(123);
+    });
+  });
+
+  describe('Chain', () => {
+    it('should chain two HKTFs', () => {
+      type Result = HKTF.Apply<
+        Compose.Chain,
+        { f: Compose.Identity; g: Compose.Identity; input: 'chain' }
+      >;
+
+      const result: Result = 'chain';
+      expect(result).toBe('chain');
+    });
+  });
+
+  describe('Zip', () => {
+    it('should apply multiple HKTFs to same input', () => {
+      type Result = HKTF.Apply<
+        Compose.Zip,
+        {
+          functions: readonly [Compose.Identity, Compose.Identity];
+          input: 'test'
+        }
+      >;
+
+      const result: Result = ['test', 'test'];
+      expect(result).toEqual(['test', 'test']);
+    });
+
+    it('should handle empty function list', () => {
+      type Result = HKTF.Apply<
+        Compose.Zip,
+        { functions: readonly []; input: 'ignored' }
+      >;
+
+      const result: Result = [];
+      expect(result).toEqual([]);
+    });
+
+    it('should handle single function', () => {
+      type Result = HKTF.Apply<
+        Compose.Zip,
+        { functions: readonly [Compose.Identity]; input: 42 }
+      >;
+
+      const result: Result = [42];
+      expect(result).toEqual([42]);
+    });
+  });
+
+  describe('Parallel', () => {
+    it('should apply multiple HKTFs in parallel (conceptually)', () => {
+      type Result = HKTF.Apply<
+        Compose.Parallel,
+        {
+          functions: readonly [Compose.Identity, Compose.Identity];
+          input: 'test'
+        }
+      >;
+
+      const result: Result = ['test', 'test'];
+      expect(result).toEqual(['test', 'test']);
+    });
+
+    it('should handle empty function list', () => {
+      type Result = HKTF.Apply<
+        Compose.Parallel,
+        { functions: readonly []; input: 'ignored' }
+      >;
+
+      const result: Result = [];
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('Tap', () => {
+    it('should return original input', () => {
+      type Result = HKTF.Apply<
+        Compose.Tap,
+        { fn: Compose.Identity; input: 'original' }
+      >;
+
+      const result: Result = 'original';
+      expect(result).toBe('original');
+    });
+
+    it('should work with numbers', () => {
+      type Result = HKTF.Apply<
+        Compose.Tap,
+        { fn: Compose.Identity; input: 42 }
+      >;
+
+      const result: Result = 42;
+      expect(result).toBe(42);
+    });
+  });
+
+  describe('Sequence', () => {
+    it('should apply functions to corresponding inputs', () => {
+      type Result = HKTF.Apply<
+        Compose.Sequence,
+        {
+          functions: readonly [Compose.Identity, Compose.Identity];
+          inputs: readonly ['a', 'b']
+        }
+      >;
+
+      const result: Result = ['a', 'b'];
+      expect(result).toEqual(['a', 'b']);
+    });
+
+    it('should handle empty lists', () => {
+      type Result = HKTF.Apply<
+        Compose.Sequence,
+        { functions: readonly []; inputs: readonly [] }
+      >;
+
+      const result: Result = [];
+      expect(result).toEqual([]);
+    });
+
+    it('should handle single pair', () => {
+      type Result = HKTF.Apply<
+        Compose.Sequence,
+        {
+          functions: readonly [Compose.Identity];
+          inputs: readonly [42]
+        }
+      >;
+
+      const result: Result = [42];
+      expect(result).toEqual([42]);
+    });
+  });
+
+  describe('Bimap', () => {
+    it('should map over ok value', () => {
+      type Result = HKTF.Apply<
+        Compose.Bimap,
+        {
+          successFn: Compose.Identity;
+          failureFn: Compose.Identity;
+          input: { ok: 42 }
+        }
+      >;
+
+      const result: Result = { ok: 42 };
+      expect(result).toEqual({ ok: 42 });
+    });
+
+    it('should map over err value', () => {
+      type Result = HKTF.Apply<
+        Compose.Bimap,
+        {
+          successFn: Compose.Identity;
+          failureFn: Compose.Identity;
+          input: { err: 'error' }
+        }
+      >;
+
+      const result: Result = { err: 'error' };
+      expect(result).toEqual({ err: 'error' });
+    });
+  });
+
+  describe('When', () => {
+    it('should handle true predicate', () => {
+      // Define a simple predicate HKTF
+      interface AlwaysTrue extends HKTF.Base {
+        [HKTF.ArgsSymbol]: { input: unknown };
+        [HKTF.ResultSymbol]: true;
+      }
+
+      type Result = HKTF.Apply<
+        Compose.When,
+        {
+          predicate: AlwaysTrue;
+          fn: Compose.Identity;
+          input: 'test'
+        }
+      >;
+
+      const result: Result = 'test';
+      expect(result).toBe('test');
+    });
+
+    it('should handle false predicate', () => {
+      interface AlwaysFalse extends HKTF.Base {
+        [HKTF.ArgsSymbol]: { input: unknown };
+        [HKTF.ResultSymbol]: false;
+      }
+
+      type Result = HKTF.Apply<
+        Compose.When,
+        {
+          predicate: AlwaysFalse;
+          fn: Compose.Identity;
+          input: 'test'
+        }
+      >;
+
+      const result: Result = 'test';
+      expect(result).toBe('test');
+    });
+  });
+
+  describe('Unless', () => {
+    it('should handle false predicate', () => {
+      interface AlwaysFalse extends HKTF.Base {
+        [HKTF.ArgsSymbol]: { input: unknown };
+        [HKTF.ResultSymbol]: false;
+      }
+
+      type Result = HKTF.Apply<
+        Compose.Unless,
+        {
+          predicate: AlwaysFalse;
+          fn: Compose.Identity;
+          input: 'test'
+        }
+      >;
+
+      const result: Result = 'test';
+      expect(result).toBe('test');
+    });
+
+    it('should handle true predicate', () => {
+      interface AlwaysTrue extends HKTF.Base {
+        [HKTF.ArgsSymbol]: { input: unknown };
+        [HKTF.ResultSymbol]: true;
+      }
+
+      type Result = HKTF.Apply<
+        Compose.Unless,
+        {
+          predicate: AlwaysTrue;
+          fn: Compose.Identity;
+          input: 'test'
+        }
+      >;
+
+      const result: Result = 'test';
+      expect(result).toBe('test');
+    });
+  });
 });

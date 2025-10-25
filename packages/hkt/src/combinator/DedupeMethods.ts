@@ -1,0 +1,55 @@
+import * as HKTF from '../hktf.js';
+import * as HKTO from '../hkto.js';
+import * as Method from '../method.js';
+
+/**
+ * DedupeMethods HKTF - removes duplicate methods by message type
+ *
+ * Returns an HKTO with only the first occurrence of each method type.
+ *
+ * @example
+ * ```typescript
+ * type Unique = HKTF.Apply<
+ *   DedupeMethods,
+ *   { hkto: MergedHKTO }
+ * >;
+ * ```
+ */
+
+export interface DedupeMethodsArgs {
+  hkto: HKTO.Base;
+}
+
+export interface DedupeMethodsResult<T extends DedupeMethodsArgs> {
+  result: HKTO.Combine<
+    DedupeByType<
+      T['hkto'][typeof HKTO.MethodsSymbol],
+      never
+    >
+  >;
+}
+
+export interface DedupeMethods extends HKTF.Base {
+  [HKTF.ArgsSymbol]: DedupeMethodsArgs;
+  [HKTF.ResultSymbol]: DedupeMethodsResult<HKTF.Args<this>>;
+}
+
+/**
+ * Helper: Remove duplicate method types, keeping first occurrence
+ */
+type DedupeByType<
+  Methods extends readonly Method.Base[],
+  Seen
+> = Methods extends readonly []
+  ? readonly []
+  : Methods extends readonly [infer M, ...infer Rest]
+  ? M extends Method.Base
+    ? Rest extends readonly Method.Base[]
+      ? Method.MessageOf<M> extends { type: infer T }
+        ? T extends Seen
+          ? DedupeByType<Rest, Seen>
+          : readonly [M, ...DedupeByType<Rest, Seen | T>]
+        : readonly [M, ...DedupeByType<Rest, Seen>]
+      : readonly []
+    : readonly []
+  : readonly [];
