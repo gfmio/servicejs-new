@@ -1,0 +1,26 @@
+{
+  "name": "@servicejs/capability-console",
+  "version": "0.1.0",
+  "description": "Console logging capability for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
