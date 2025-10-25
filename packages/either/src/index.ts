@@ -61,3 +61,14 @@ export {
   all,
   partition,
 } from './either.js';
+
+export {
+  rights,
+  lefts,
+  partitionMap,
+  sequence,
+  traverse,
+  firstRight,
+  eitherWhen,
+  map2,
+} from './utilities.js';
