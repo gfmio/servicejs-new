@@ -44,6 +44,14 @@ export { pipe, compose } from './compose.js';
 
 export { Identity, Id, of, pure } from './identity.js';
 
+export { Task, task, parallel, sequential } from './task.js';
+
+export { Reader, reader, ask, asks } from './reader.js';
+
+export { Writer, writer, tell } from './writer.js';
+
+export { State, state, get, put, modify, gets } from './state.js';
+
 export {
   identity,
   constant,
