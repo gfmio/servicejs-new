@@ -1,0 +1,15 @@
+{
+  "name": "@servicejs-examples/runtime-tauri-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tauri-driver run src/index.ts",
+    "dev": "tauri-driver run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@servicejs/runtime-tauri": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  }
+}

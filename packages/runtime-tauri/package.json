@@ -1,0 +1,41 @@
+{
+  "name": "@servicejs/runtime-tauri",
+  "version": "0.1.0",
+  "description": "Tauri runtime capabilities for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "servicejs",
+    "runtime",
+    "tauri",
+    "capabilities",
+    "desktop"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "@tauri-apps/api": "^2.0.0"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "^2.0.0"
+  }
+}
