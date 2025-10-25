@@ -1,0 +1,339 @@
+// Bun runtime bootstrap - uses Bun's optimized APIs where available
+import { ok, err } from '@servicejs/result';
+import { some, none } from '@servicejs/option';
+import type { BunRuntimeCapabilities, BunBootstrapOptions, BunProcessCapability, FilesystemError, HTTPError, TimeError, TimerHandle, CryptoError } from './types';
+
+export function bootstrap(options: BunBootstrapOptions = {}): BunRuntimeCapabilities {
+  const { captureShutdownSignals = true, signals = ['SIGTERM', 'SIGINT'], captureUncaughtErrors = true, captureUnhandledRejections = true } = options;
+
+  // Environment capability
+  const env = {
+    get: (name: string) => {
+      const value = process.env[name];
+      return value !== undefined ? some(value) : none();
+    },
+    getAll: () => Object.freeze({ ...process.env }),
+    platform: () => 'bun' as const,
+  };
+
+  // Time capability
+  const time = {
+    now: () => Date.now(),
+    highResolutionTime: () => some(performance.now()),
+    setTimeout: (callback: () => void, ms: number) => {
+      try {
+        const handle = setTimeout(callback, ms) as unknown as TimerHandle;
+        return ok(handle);
+      } catch (error: any) {
+        const timeError: TimeError = {
+          code: 'TIMER_FAILED',
+          message: error.message,
+        };
+        return err(timeError);
+      }
+    },
+    clearTimeout: (handle: TimerHandle) => {
+      try {
+        clearTimeout(handle as any);
+        return ok(undefined);
+      } catch (error: any) {
+        const timeError: TimeError = {
+          code: 'INVALID_HANDLE',
+          message: error.message,
+        };
+        return err(timeError);
+      }
+    },
+    setInterval: (callback: () => void, ms: number) => {
+      try {
+        const handle = setInterval(callback, ms) as unknown as TimerHandle;
+        return ok(handle);
+      } catch (error: any) {
+        const timeError: TimeError = {
+          code: 'TIMER_FAILED',
+          message: error.message,
+        };
+        return err(timeError);
+      }
+    },
+    clearInterval: (handle: TimerHandle) => {
+      try {
+        clearInterval(handle as any);
+        return ok(undefined);
+      } catch (error: any) {
+        const timeError: TimeError = {
+          code: 'INVALID_HANDLE',
+          message: error.message,
+        };
+        return err(timeError);
+      }
+    },
+  };
+
+  // Lifecycle capability
+  const shutdownHandlers: Array<() => void | Promise<void>> = [];
+
+  if (captureShutdownSignals) {
+    for (const signal of signals) {
+      process.on(signal, async () => {
+        for (const handler of shutdownHandlers) {
+          await handler();
+        }
+        process.exit(0);
+      });
+    }
+  }
+
+  const lifecycle = {
+    onShutdown: (handler: () => void | Promise<void>) => {
+      shutdownHandlers.push(handler);
+      return () => {
+        const index = shutdownHandlers.indexOf(handler);
+        if (index !== -1) {
+          shutdownHandlers.splice(index, 1);
+        }
+      };
+    },
+    shutdown: async () => {
+      for (const handler of shutdownHandlers) {
+        await handler();
+      }
+    },
+  };
+
+  // Console capability
+  const consoleCapability = {
+    log: console.log.bind(console),
+    info: console.info.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console),
+    debug: console.debug.bind(console),
+  };
+
+  // Filesystem capability (using Bun.file API)
+  const filesystem = {
+    async readFile(path: string, options?: { encoding?: string }) {
+      try {
+        const file = Bun.file(path);
+        if (options?.encoding === 'utf8' || options?.encoding === 'utf-8') {
+          const text = await file.text();
+          return ok(text as any);
+        } else {
+          const buffer = await file.arrayBuffer();
+          return ok(new Uint8Array(buffer) as any);
+        }
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'ENOENT' ? 'NOT_FOUND' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async writeFile(path: string, data: Uint8Array | string) {
+      try {
+        await Bun.write(path, data);
+        return ok(undefined);
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async exists(path: string) {
+      try {
+        const file = Bun.file(path);
+        const exists = await file.exists();
+        return ok(exists);
+      } catch {
+        return ok(false);
+      }
+    },
+    async mkdir(path: string, options?: { recursive?: boolean }) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.mkdir(path, options);
+        return ok(undefined);
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'EEXIST' ? 'ALREADY_EXISTS' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async readdir(path: string) {
+      try {
+        const fs = await import('fs/promises');
+        const entries = await fs.readdir(path);
+        return ok(Object.freeze(entries));
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'ENOENT' ? 'NOT_FOUND' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async stat(path: string) {
+      try {
+        const fs = await import('fs/promises');
+        const stats = await fs.stat(path);
+        return ok({
+          isFile: stats.isFile(),
+          isDirectory: stats.isDirectory(),
+          size: stats.size,
+          mtime: stats.mtime,
+          ctime: stats.ctime,
+        });
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'ENOENT' ? 'NOT_FOUND' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async unlink(path: string) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(path);
+        return ok(undefined);
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'ENOENT' ? 'NOT_FOUND' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+    async rmdir(path: string, options?: { recursive?: boolean }) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.rmdir(path, options);
+        return ok(undefined);
+      } catch (error: any) {
+        const fsError: FilesystemError = {
+          code: error.code === 'ENOENT' ? 'NOT_FOUND' : error.code === 'EACCES' ? 'PERMISSION_DENIED' : 'IO_ERROR',
+          message: error.message,
+        };
+        return err(fsError);
+      }
+    },
+  };
+
+  // HTTP capability (using fetch)
+  const http = {
+    fetch: async (url: string, options?: RequestInit) => {
+      try {
+        const response = await fetch(url, options);
+        return ok(response);
+      } catch (error: any) {
+        const httpError: HTTPError = {
+          code: error.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR',
+          message: error.message,
+        };
+        return err(httpError);
+      }
+    },
+  };
+
+  // Streams capability (using Node.js compatible streams)
+  const streams = {
+    get stdin() {
+      return process.stdin;
+    },
+    get stdout() {
+      return process.stdout;
+    },
+    get stderr() {
+      return process.stderr;
+    },
+  };
+
+  // Crypto capability (using Node.js crypto module)
+  const cryptoCapability = {
+    randomUUID: () => {
+      return crypto.randomUUID();
+    },
+    getRandomValues: <T extends ArrayBufferView>(array: T): T => {
+      return crypto.getRandomValues(array);
+    },
+    async createHash(algorithm: string, data: Uint8Array) {
+      try {
+        const { createHash } = await import('crypto');
+        const hash = createHash(algorithm);
+        hash.update(data);
+        const result = new Uint8Array(hash.digest());
+        return ok(result);
+      } catch (error: any) {
+        const cryptoError: CryptoError = {
+          code: 'UNSUPPORTED_ALGORITHM',
+          message: error.message,
+        };
+        return err(cryptoError);
+      }
+    },
+    async createHmac(algorithm: string, key: Uint8Array, data: Uint8Array) {
+      try {
+        const { createHmac } = await import('crypto');
+        const hmac = createHmac(algorithm, key);
+        hmac.update(data);
+        const result = new Uint8Array(hmac.digest());
+        return ok(result);
+      } catch (error: any) {
+        const cryptoError: CryptoError = {
+          code: 'UNSUPPORTED_ALGORITHM',
+          message: error.message,
+        };
+        return err(cryptoError);
+      }
+    },
+  };
+
+  // Process capability
+  const processCapability: BunProcessCapability = {
+    get pid() { return process.pid; },
+    get argv() { return Object.freeze([...process.argv]); },
+    get cwd() { return process.cwd(); },
+    get platform() { return process.platform; },
+    get arch() { return process.arch; },
+    get version() { return Bun.version; }, // Bun-specific
+    exit(code) { process.exit(code); },
+    chdir(directory) {
+      try {
+        process.chdir(directory);
+        return ok(undefined);
+      } catch (error: any) {
+        return err({ code: (error.code === 'ENOENT' ? 'INVALID_DIRECTORY' : 'PERMISSION_DENIED') as const, message: error.message });
+      }
+    },
+  };
+
+  // Error handling setup
+  if (captureUncaughtErrors) {
+    process.on('uncaughtException', (error) => {
+      console.error('Uncaught exception:', error);
+    });
+  }
+
+  if (captureUnhandledRejections) {
+    process.on('unhandledRejection', (reason) => {
+      console.error('Unhandled rejection:', reason);
+    });
+  }
+
+  return {
+    env,
+    time,
+    lifecycle,
+    console: consoleCapability,
+    fs: filesystem,
+    http,
+    streams,
+    crypto: cryptoCapability,
+    process: processCapability,
+  };
+}
