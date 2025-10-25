@@ -1,8 +1,8 @@
 # ServiceJS Design Document
 
 **Version:** 0.1.0
-**Status:** Draft
-**Last Updated:** 2025-10-23
+**Status:** Phase 1 Complete - HKT Foundation, Type Utilities, and Runtime Capabilities Implemented
+**Last Updated:** 2025-10-25
 **Authors:** gfmio, Claude
 
 ---
@@ -210,6 +210,7 @@ Location transparency provides:
 │                    Developer Experience Layer                     │
 │  @servicejs/decorators - Class-based components with decorators  │
 │  @servicejs/builder    - Fluent API for component creation       │
+│  @servicejs/di         - Dependency injection system       [✅]  │
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -219,11 +220,34 @@ Location transparency provides:
 │  @servicejs/lifecycle    - Init, shutdown, resource management  │
 │  @servicejs/backpressure - Async send, flow control, circuit    │
 │  @servicejs/schema       - Runtime validation (Zod, Cap'n Proto)│
+│  @servicejs/config       - Configuration management       [✅]  │
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Transport Layer                           │
 │  @servicejs/transport - Local, worker, shared memory, network   │
+└─────────────────────────────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────────────────────────────────────┐
+│                      Runtime Capabilities Layer            [✅]  │
+│  Platform Runtimes:                                              │
+│    @servicejs/runtime-node          - Node.js runtime           │
+│    @servicejs/runtime-deno          - Deno runtime              │
+│    @servicejs/runtime-bun           - Bun runtime               │
+│    @servicejs/runtime-browser       - Browser runtime           │
+│    @servicejs/runtime-web-worker    - Web Worker runtime        │
+│    @servicejs/runtime-shared-worker - Shared Worker runtime     │
+│    @servicejs/runtime-service-worker - Service Worker runtime   │
+│    @servicejs/runtime-cloudflare    - Cloudflare Workers        │
+│  Capability Interfaces (for testing and mocking):                │
+│    @servicejs/capability-env        - Environment variables     │
+│    @servicejs/capability-time       - Time and timers           │
+│    @servicejs/capability-lifecycle  - Shutdown coordination     │
+│    @servicejs/capability-fs         - File system operations    │
+│    @servicejs/capability-http       - HTTP client               │
+│    @servicejs/capability-console    - Console logging           │
+│    @servicejs/capability-streams    - Streams (stdin/out/err)   │
+│    @servicejs/capability-crypto     - Cryptographic operations  │
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
@@ -233,19 +257,31 @@ Location transparency provides:
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Type Utilities                             │
-│  @servicejs/result - Result<T, E> with HKT types                │
-│  @servicejs/option - Option<T> with HKT types                   │
-│  @servicejs/either - Either<L, R> with HKT types                │
-│  @servicejs/pure   - Pure functions (compose, pipe, identity)   │
+│                        Type Utilities                      [✅]  │
+│  @servicejs/result       - Result<T, E> with HKT types          │
+│  @servicejs/option       - Option<T> with HKT types             │
+│  @servicejs/either       - Either<L, R> with HKT types          │
+│  @servicejs/pure         - Pure functions (compose, pipe, ...)  │
+│  @servicejs/nonempty-array - Non-empty arrays                   │
+│  @servicejs/these        - These<L, R> three-state type         │
+│  @servicejs/validation   - Validation with error accumulation   │
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
-│                    HKT Foundation (Type-Level)                    │
-│  @servicejs/hkt - HKTF, HKTO, Method, Protocol helpers          │
-│                   (Pure type-level, zero runtime)                │
+│                    HKT Foundation (Type-Level)             [✅]  │
+│  @servicejs/hkt-core       - HKTF, HKTO, Method, Protocol       │
+│  @servicejs/hkt-arithmetic - Type-level arithmetic              │
+│  @servicejs/hkt-boolean    - Type-level boolean logic           │
+│  @servicejs/hkt-string     - Type-level string manipulation     │
+│  @servicejs/hkt-tuple      - Type-level tuple operations        │
+│  @servicejs/hkt-object     - Type-level object manipulation     │
+│  @servicejs/hkt-combinator - Higher-order HKTO functions        │
+│  @servicejs/hkt-compose    - Function composition utilities     │
+│                              (Pure type-level, zero runtime)    │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Legend:** [✅] = Implemented in Phase 1
 
 ### Core Concepts
 
