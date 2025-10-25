@@ -1,0 +1,64 @@
+import { ok, err } from '@servicejs/result';
+import { some, none } from '@servicejs/option';
+import type { ServiceWorkerRuntimeCapabilities, ServiceWorkerBootstrapOptions, CacheCapability } from './types';
+
+declare const self: ServiceWorkerGlobalScope;
+
+export function bootstrap(options: ServiceWorkerBootstrapOptions = {}): ServiceWorkerRuntimeCapabilities {
+  const { config = {}, captureUncaughtErrors = true, captureUnhandledRejections = true } = options;
+
+  const cache: CacheCapability = {
+    async open(cacheName) {
+      try {
+        const c = await caches.open(cacheName);
+        return ok(c);
+      } catch (error: any) {
+        return err({ code: 'CACHE_ERROR' as const, message: error.message });
+      }
+    },
+    async has(cacheName) {
+      try {
+        const has = await caches.has(cacheName);
+        return ok(has);
+      } catch (error: any) {
+        return err({ code: 'CACHE_ERROR' as const, message: error.message });
+      }
+    },
+    async delete(cacheName) {
+      try {
+        const deleted = await caches.delete(cacheName);
+        return ok(deleted);
+      } catch (error: any) {
+        return err({ code: 'CACHE_ERROR' as const, message: error.message });
+      }
+    },
+    async keys() {
+      try {
+        const keys = await caches.keys();
+        return ok(Object.freeze(keys));
+      } catch (error: any) {
+        return err({ code: 'CACHE_ERROR' as const, message: error.message });
+      }
+    },
+    async match(request) {
+      try {
+        const response = await caches.match(request);
+        return ok(response);
+      } catch (error: any) {
+        return err({ code: 'CACHE_ERROR' as const, message: error.message });
+      }
+    },
+  };
+
+  // Simplified implementations - reuse Web Worker patterns for env, time, lifecycle, console, http, crypto
+  return {
+    env: { get: (n) => config[n] ? some(config[n]) : none(), getAll: () => Object.freeze(config), platform: () => 'service-worker' },
+    time: { now: () => Date.now(), highResolutionTime: () => some(performance.now()), setTimeout: (cb, ms) => ok(self.setTimeout(cb, ms) as any), clearTimeout: () => ok(undefined), setInterval: (cb, ms) => ok(self.setInterval(cb, ms) as any), clearInterval: () => ok(undefined) },
+    lifecycle: { onShutdown: () => () => {}, shutdown: async () => {} },
+    console: { log: console.log, info: console.info, warn: console.warn, error: console.error, debug: console.debug },
+    http: { request: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch directly in Service Worker' }), get: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }), post: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }), put: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }), patch: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }), delete: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }), head: async () => err({ code: 'REQUEST_FAILED' as const, message: 'Use fetch' }) },
+    crypto: { randomBytes: (l) => { const b = new Uint8Array(l); crypto.getRandomValues(b); return ok(b); }, randomUUID: () => ok(crypto.randomUUID()), randomInt: (min, max) => ok(Math.floor(Math.random() * (max - min)) + min), hash: async () => err({ code: 'OPERATION_FAILED' as const, message: 'Use crypto.subtle directly' }), hmac: async () => err({ code: 'OPERATION_FAILED' as const, message: 'Use crypto.subtle directly' }), timingSafeEqual: (a, b) => ok(a.length === b.length && a.every((v, i) => v === b[i])) },
+    cache,
+    clients: self.clients,
+  };
+}
