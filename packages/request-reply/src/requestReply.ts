@@ -6,7 +6,7 @@
  */
 
 import type { Message, Capability } from '@servicejs/core';
-import { some, none, type Option } from '@servicejs/option';
+import { some, none, isSome, type Option } from '@servicejs/option';
 import { ok, err, type Result } from '@servicejs/result';
 
 /**
@@ -121,7 +121,7 @@ export function createRequestReply<TRequest, TResponse, TResponseMsg extends Mes
     correlationId,
 
     hasResponse(): boolean {
-      return response.isSome();
+      return isSome(response);
     },
 
     getResponse(): Option<TResponse> {
@@ -232,7 +232,7 @@ export async function waitForResponse<TResponse>(
       }
 
       const response = pendingRequest.getResponse();
-      if (response.isSome()) {
+      if (isSome(response)) {
         resolve(ok(response.value));
         return;
       }

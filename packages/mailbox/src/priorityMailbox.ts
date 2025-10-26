@@ -110,7 +110,7 @@ export function createPriorityMailbox<TMsg extends Message>(
     let insertIndex = 0;
     while (
       insertIndex < queue.length &&
-      getPriority(queue[insertIndex]) >= priority
+      getPriority(queue[insertIndex]!) >= priority
     ) {
       insertIndex++;
     }
