@@ -9,6 +9,8 @@ Mailbox implementations for ServiceJS - FIFO, Priority, and Bounded queues for m
 - **FIFO Mailbox**: First-in-first-out delivery (standard queue)
 - **Priority Mailbox**: Priority-based delivery (higher priority first)
 - **Bounded Mailbox**: Capacity-limited with backpressure (rejects when full)
+- **Async Mailbox**: Asynchronous message processing (for I/O operations)
+- **Helper Utilities**: Integrate mailboxes with components easily
 
 ## Installation
 
@@ -230,6 +232,127 @@ console.log(`Available: ${mailbox.available()}`);
 console.log(`Full: ${mailbox.isFull()}`);
 ```
 
+### Async Mailbox
+
+Asynchronous message processing for I/O operations, API calls, and database queries.
+
+**Use cases:**
+- I/O operations (file system, network)
+- API requests
+- Database queries
+- Any asynchronous processing
+
+**API:**
+```typescript
+interface AsyncMailbox<TMsg> {
+  enqueue(message: TMsg): void;
+  start(handler: (message: TMsg) => Promise<void>): Promise<void>;
+  stop(): Promise<void>;
+  size(): number;
+  isEmpty(): boolean;
+  isRunning(): boolean;
+  clear(): void;
+}
+```
+
+**Example:**
+```typescript
+const mailbox = createAsyncMailbox<ApiRequestMsg>();
+
+// Enqueue requests
+mailbox.enqueue(createMessage('api-request', { url: '/users' }));
+mailbox.enqueue(createMessage('api-request', { url: '/posts' }));
+
+// Start processing
+const processPromise = mailbox.start(async (msg) => {
+  const response = await fetch(msg.url);
+  const data = await response.json();
+  console.log('Received:', data);
+});
+
+// Later: stop processing
+await mailbox.stop();
+await processPromise;
+```
+
+**Key Features:**
+- Sequential processing (waits for each handler to complete)
+- Graceful shutdown (waits for current message)
+- Error handling (continues processing after errors)
+- Messages can be enqueued while processing
+
+## Helper Utilities
+
+Helper functions for integrating mailboxes with components.
+
+### createMailboxCapability
+
+Wrap a capability with a mailbox for buffered sends.
+
+```typescript
+import { createMailboxCapability } from '@servicejs/mailbox';
+
+const mailbox = createFIFOMailbox<MyMsg>();
+const bufferedCap = createMailboxCapability(mailbox, component.capability);
+
+// Messages are queued, not sent immediately
+bufferedCap.send(message1);
+bufferedCap.send(message2);
+
+// Process manually
+while (!mailbox.isEmpty()) {
+  const msg = mailbox.dequeue();
+  if (msg.isSome()) {
+    component.capability.send(msg.value);
+  }
+}
+```
+
+### wrapComponentWithMailbox
+
+Wrap a component capability with a mailbox and processing controls.
+
+```typescript
+import { wrapComponentWithMailbox } from '@servicejs/mailbox';
+
+const mailbox = createFIFOMailbox<MyMsg>();
+const wrapped = wrapComponentWithMailbox(mailbox, component.capability, {
+  autoProcess: false, // Manual processing
+});
+
+// Queue messages
+wrapped.capability.send(message1);
+wrapped.capability.send(message2);
+
+// Process all
+wrapped.processMessages();
+
+// Or process in batches
+wrapped.processBatch(10);
+```
+
+**Options:**
+- `autoProcess`: Automatically process messages on send (default: false)
+- `batchSize`: Maximum messages to process per send (default: Infinity)
+
+### createAutoProcessingCapability
+
+Create a capability that automatically processes messages through a mailbox.
+
+```typescript
+import { createAutoProcessingCapability } from '@servicejs/mailbox';
+
+const mailbox = createFIFOMailbox<MyMsg>();
+const autoCap = createAutoProcessingCapability(mailbox, component.capability);
+
+// Messages are processed immediately in FIFO order
+autoCap.send(message1);
+autoCap.send(message2);
+// Both messages already processed
+```
+
+**Use case:** Ensure sequential processing even with concurrent sends.
+
 ## Common Patterns
 
 ### Producer-Consumer with FIFO
@@ -334,6 +457,12 @@ function circularEnqueue(message: Message) {
 - `isFull()` - Check if mailbox is at capacity (`boolean`)
 - `available()` - Get number of available slots (`number`)
 
+### Async Mailbox Methods
+
+- `start(handler)` - Start processing messages (`Promise<void>`)
+- `stop()` - Stop processing (waits for current message) (`Promise<void>`)
+- `isRunning()` - Check if currently processing (`boolean`)
+
 ## Examples
 
 See the [examples directory](./examples) for complete working examples:
@@ -341,6 +470,8 @@ See the [examples directory](./examples) for complete working examples:
 - [FIFO Examples](./examples/fifoMailbox.ts) - Basic queuing and buffering
 - [Priority Examples](./examples/priorityMailbox.ts) - Task scheduling and alerts
 - [Bounded Examples](./examples/boundedMailbox.ts) - Backpressure and rate limiting
+- [Async Examples](./examples/asyncMailbox.ts) - Asynchronous I/O operations
+- [Helper Examples](./examples/helpers.ts) - Component integration utilities
 
 ## Performance Considerations
 
@@ -358,6 +489,12 @@ See the [examples directory](./examples) for complete working examples:
 - **Enqueue**: O(1)
 - **Dequeue**: O(1)
 - **Memory**: O(capacity) - fixed upper bound
+
+### Async Mailbox
+- **Enqueue**: O(1)
+- **Processing**: Sequential (one at a time)
+- **Memory**: O(n) where n is queue size
+- **Note**: Async processing ensures sequential execution even with concurrent enqueues
 
 ## License
 

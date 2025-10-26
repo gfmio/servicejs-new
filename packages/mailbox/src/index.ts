@@ -47,3 +47,18 @@ export {
   type BoundedMailbox,
   type EnqueueResult,
 } from './boundedMailbox.js';
+
+// Async Mailbox
+export {
+  createAsyncMailbox,
+  type AsyncMailbox,
+} from './asyncMailbox.js';
+
+// Helper Utilities
+export {
+  createMailboxCapability,
+  wrapComponentWithMailbox,
+  createAutoProcessingCapability,
+  type Mailbox,
+  type WrapComponentOptions,
+} from './helpers.js';
