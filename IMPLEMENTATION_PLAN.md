@@ -1,7 +1,7 @@
 # ServiceJS Implementation Plan
 
 **Version:** 0.1.0
-**Status:** Milestones 0-4 Complete (HKT Foundation, Core Framework, Mailboxes, Communication Patterns, Lifecycle & Resource Management)
+**Status:** Milestones 0-5 Complete (HKT Foundation, Core Framework, Mailboxes, Communication Patterns, Lifecycle & Resource Management, Backpressure & Flow Control)
 **Last Updated:** 2025-10-26
 
 ---
@@ -952,6 +952,7 @@ This document outlines the complete implementation plan for ServiceJS, organized
 - @servicejs/request-reply - RPC-style request-response pattern
 - @servicejs/pub-sub - Topic-based publish/subscribe pattern
 - @servicejs/lifecycle - Lifecycle hooks, shutdown coordination, resource management (RAII)
+- @servicejs/flow-control - Backpressure, circuit breaker, rate limiting, batching
 
 **Test Coverage:**
 
@@ -960,7 +961,8 @@ This document outlines the complete implementation plan for ServiceJS, organized
 - Request-Reply: 9 tests passing ✅
 - Pub-Sub: 19 tests passing ✅
 - Lifecycle: 42 tests passing (17 Lifecycle + 13 Shutdown + 12 Resources) ✅
-- **Total: 226 tests passing**
+- Flow Control: 42 tests passing (7 Async + 13 Circuit Breaker + 14 Rate Limiter + 8 Batching) ✅
+- **Total: 268 tests passing**
 
 **Integration Examples:**
 
@@ -972,10 +974,10 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 **Documentation:**
 
-- Complete README.md for all five packages ✅
+- Complete README.md for all six packages ✅
 - Comprehensive API documentation with examples ✅
 - Usage patterns and best practices ✅
-- 15+ example files with 59+ working examples ✅
+- 19+ example files with 90+ working examples ✅
 - Integration examples demonstrating real-world usage ✅
 
 **Package Structure:**
@@ -1144,26 +1146,26 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 5.1 Async Capability
 
-- [ ] **Define async capability interface**
+- [x] **Define async capability interface** ✅
   - Define `AsyncCapability<TMsg>` interface
   - Add `sendAsync(message)` returning Promise<void>
   - Notes: Async variant of Capability
 
-- [ ] **Implement async capability**
+- [x] **Implement async capability** ✅
   - Create `createAsyncCapability` factory
   - Accept mailbox and max queue size
   - Implement sendAsync that waits when queue full
   - Poll queue size until below threshold
   - Notes: Simple backpressure via polling
 
-- [ ] **Write tests for async capability**
+- [x] **Write tests for async capability** ✅
   - Test sendAsync resolves when sent
   - Test sendAsync waits when queue full
   - Test sendAsync resumes when space available
   - Test multiple concurrent sendAsync
-  - Notes: Test backpressure behavior
+  - Notes: Test backpressure behavior (7 tests)
 
-- [ ] **Write async capability documentation**
+- [x] **Write async capability documentation** ✅
   - Document backpressure mechanism
   - Document use cases
   - Add usage example
@@ -1171,7 +1173,7 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 5.2 Circuit Breaker
 
-- [ ] **Define circuit breaker types**
+- [x] **Define circuit breaker types** ✅
   - Define `CircuitState` union type: 'closed' | 'open' | 'half-open'
   - Define `CircuitBreakerConfig` interface
   - Add failure threshold
@@ -1179,25 +1181,25 @@ This document outlines the complete implementation plan for ServiceJS, organized
   - Add optional state change callback
   - Notes: Classic circuit breaker pattern
 
-- [ ] **Implement circuit breaker**
+- [x] **Implement circuit breaker** ✅
   - Create `createCircuitBreaker` factory
   - Wrap capability with circuit breaker logic
   - Track failure count
   - Implement state transitions
-  - Throw when circuit open
+  - Return error when circuit open
   - Implement half-open retry logic
   - Notes: Fail fast when downstream broken
 
-- [ ] **Write tests for circuit breaker**
+- [x] **Write tests for circuit breaker** ✅
   - Test circuit closes on success
   - Test circuit opens after threshold failures
   - Test circuit stays open until timeout
   - Test circuit transitions to half-open
   - Test half-open success closes circuit
   - Test half-open failure reopens circuit
-  - Notes: Test all state transitions
+  - Notes: Test all state transitions (13 tests)
 
-- [ ] **Write circuit breaker documentation**
+- [x] **Write circuit breaker documentation** ✅
   - Document circuit breaker pattern
   - Document state machine
   - Add usage example
@@ -1205,29 +1207,29 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 5.3 Rate Limiting
 
-- [ ] **Define rate limiter types**
+- [x] **Define rate limiter types** ✅
   - Define `RateLimiterConfig` interface
   - Add requests per window
   - Add window duration
-  - Add optional overflow strategy
-  - Notes: Token bucket or sliding window
+  - Add optional overflow strategy (drop/error)
+  - Notes: Token bucket algorithm
 
-- [ ] **Implement rate limiter**
+- [x] **Implement rate limiter** ✅
   - Create `createRateLimiter` factory
   - Wrap capability with rate limiting logic
   - Implement token bucket algorithm
-  - Drop or queue messages when limited
+  - Drop or error messages when limited
   - Reset tokens per window
   - Notes: Simple rate limiting
 
-- [ ] **Write tests for rate limiter**
+- [x] **Write tests for rate limiter** ✅
   - Test allows messages under limit
   - Test blocks messages over limit
   - Test resets after window
   - Test token refill
-  - Notes: Use fake timers
+  - Notes: Real timers used (14 tests)
 
-- [ ] **Write rate limiter documentation**
+- [x] **Write rate limiter documentation** ✅
   - Document rate limiting pattern
   - Document configuration
   - Add usage example
@@ -1235,27 +1237,27 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 5.4 Batching
 
-- [ ] **Define batching types**
+- [x] **Define batching types** ✅
   - Define `BatchingConfig` interface
   - Add max batch size
   - Add max batch delay
   - Notes: Batch messages for efficiency
 
-- [ ] **Implement batching capability**
+- [x] **Implement batching capability** ✅
   - Create `createBatchingCapability` factory
   - Accumulate messages in buffer
   - Flush on max size or max delay
   - Send batch as array message
   - Notes: Optimization for high throughput
 
-- [ ] **Write tests for batching**
+- [x] **Write tests for batching** ✅
   - Test batches on max size
   - Test batches on max delay
   - Test partial batches
   - Test empty batches
-  - Notes: Use fake timers
+  - Notes: Real timers used (8 tests)
 
-- [ ] **Write batching documentation**
+- [x] **Write batching documentation** ✅
   - Document batching pattern
   - Document use cases (bulk operations)
   - Add usage example
@@ -1263,23 +1265,66 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 5.5 Flow Control Examples
 
-- [ ] **Create backpressure example**
+- [x] **Create backpressure example** ✅
   - Fast producer, slow consumer
   - Demonstrate async send with backpressure
   - Show queue depth management
-  - Notes: Producer/consumer pattern
+  - Notes: Producer/consumer pattern (backpressure.ts, 5 examples)
 
-- [ ] **Create circuit breaker example**
+- [x] **Create circuit breaker example** ✅
   - Unreliable downstream service
   - Demonstrate failure detection
   - Show recovery after timeout
-  - Notes: Resilient microservices
+  - Notes: Resilient microservices (circuitBreaker.ts, 8 examples)
 
-- [ ] **Create rate limiting example**
+- [x] **Create rate limiting example** ✅
   - API client with rate limiting
   - Demonstrate request throttling
   - Show token bucket behavior
-  - Notes: External API integration
+  - Notes: External API integration (rateLimiting.ts, 9 examples)
+
+- [x] **Create batching example** ✅
+  - Bulk database operations
+  - Network request batching
+  - Time and size-based flushing
+  - Notes: High-throughput patterns (batching.ts, 9 examples)
+
+### Summary of Milestone 5
+
+**Package Implemented:**
+
+- @servicejs/flow-control - Complete backpressure and flow control system
+
+**Features:**
+
+- **Async Capability**: Backpressure via async send with queue monitoring and polling
+- **Circuit Breaker**: Three-state pattern (closed/open/half-open) with automatic recovery
+- **Rate Limiter**: Token bucket algorithm with drop/error overflow strategies
+- **Batching**: Time and size-based batching for efficiency and throughput
+
+**Test Coverage:**
+
+- Async capability: 7 tests passing ✅
+- Circuit breaker: 13 tests passing ✅
+- Rate limiter: 14 tests passing ✅
+- Batching: 8 tests passing ✅
+- **Total: 42 tests passing**
+
+**Examples:**
+
+- backpressure.ts - Producer-consumer patterns with backpressure (5 examples)
+- circuitBreaker.ts - Circuit breaker states and recovery (8 examples)
+- rateLimiting.ts - Rate limiting strategies and monitoring (9 examples)
+- batching.ts - Batch accumulation and flushing patterns (9 examples)
+- **Total: 31 examples demonstrating flow control patterns**
+
+**Documentation:**
+
+- Complete README.md with API reference ✅
+- Usage patterns and best practices ✅
+- Error handling strategies ✅
+- Performance characteristics ✅
+- Pattern combination examples ✅
 
 ---
 
