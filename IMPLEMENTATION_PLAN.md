@@ -1,8 +1,8 @@
 # ServiceJS Implementation Plan
 
 **Version:** 0.1.0
-**Status:** Phase 2 Complete (Core Framework, Mailboxes, and Communication Patterns implemented)
-**Last Updated:** 2025-10-25
+**Status:** Milestones 0-3 Complete (HKT Foundation, Core Framework, Mailboxes, Communication Patterns)
+**Last Updated:** 2025-10-26
 
 ---
 
@@ -654,40 +654,52 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 2.5 Async Mailbox
 
-- [ ] **Implement async mailbox**
+- [x] **Implement async mailbox**
   - Create `createAsyncMailbox` factory
-  - Accept async `onMessage` handler
-  - Implement async processing loop
-  - Ensure sequential processing despite async
-  - Handle errors in async handlers
-  - Notes: Await each message before next
+  - Accept async handler via `start(handler)` method
+  - Implement async processing loop with start/stop
+  - Ensure sequential processing (awaits each message)
+  - Handle errors in async handlers gracefully
+  - Add `isRunning()` to check processing state
+  - Messages can be enqueued while processing
+  - Notes: Complete async mailbox with graceful shutdown ✅
 
-- [ ] **Write tests for async mailbox**
+- [x] **Write tests for async mailbox**
   - Test async handlers are awaited
-  - Test messages processed sequentially
-  - Test errors don't crash mailbox
-  - Test stop waits for pending async
-  - Test multiple async operations don't interleave
-  - Notes: Use async test utilities
+  - Test messages processed sequentially (not concurrently)
+  - Test errors don't crash mailbox (continues processing)
+  - Test stop waits for current message to complete
+  - Test messages can be added while processing
+  - Test start throws error when already running
+  - Test graceful shutdown behavior
+  - Notes: 12 comprehensive tests covering all scenarios ✅
 
-- [ ] **Write async mailbox documentation**
-  - Document use cases (I/O operations)
-  - Document error handling
-  - Add usage example
-  - Notes: Compare to sync mailbox
+- [x] **Write async mailbox documentation**
+  - Document use cases (I/O operations, API calls, database queries)
+  - Document error handling (continues after errors)
+  - Document start/stop lifecycle
+  - Add usage examples with API requests and database operations
+  - Notes: Complete documentation in README.md ✅
 
 ### 2.6 Mailbox Integration
 
-- [ ] **Create mailbox utility helpers**
+- [x] **Create mailbox utility helpers**
   - Implement `wrapComponentWithMailbox` helper
   - Implement `createMailboxCapability` helper
-  - Notes: Helpers for common patterns (not yet implemented)
+  - Implement `createAutoProcessingCapability` helper
+  - Support options: autoProcess, batchSize
+  - Provide processMessages() and processBatch(count) functions
+  - Notes: Complete helper utilities for easy component integration ✅
 
-- [ ] **Write integration tests**
-  - Test FIFO mailbox with component
-  - Test priority mailbox with component
-  - Test bounded mailbox with component
-  - Notes: Integration tests not yet implemented
+- [x] **Write integration tests**
+  - Test FIFO mailbox with component (sequential processing)
+  - Test priority mailbox with component (priority-based execution)
+  - Test bounded mailbox with component (backpressure handling)
+  - Test component with effects and mailbox
+  - Test auto-processing wrapper
+  - Test multiple components with separate mailboxes
+  - Test component state machines with mailboxes
+  - Notes: 8 comprehensive integration tests ✅
 
 - [x] **Create mailbox comparison guide**
   - Table comparing mailbox types
@@ -699,7 +711,39 @@ This document outlines the complete implementation plan for ServiceJS, organized
   - FIFO mailbox examples (producer-consumer, buffering)
   - Priority mailbox examples (task scheduling, alerts)
   - Bounded mailbox examples (backpressure handling, overflow strategies)
-  - Notes: Complete examples in examples/ directory ✅
+  - Async mailbox examples (I/O operations, API requests, database queries)
+  - Helper utility examples (component integration, auto-processing)
+  - Notes: 7 complete example files in examples/ directory ✅
+
+### Mailbox Summary
+
+**Status:** ✅ Complete - All mailbox types and utilities implemented
+
+**Packages Completed:**
+
+- FIFO Mailbox - O(1) enqueue/dequeue, standard queue
+- Priority Mailbox - O(n) enqueue, O(1) dequeue, priority-based
+- Bounded Mailbox - O(1) operations, capacity-limited with backpressure
+- Async Mailbox - Sequential async processing for I/O operations (NEW)
+- Helper Utilities - Easy component integration (NEW)
+
+**Test Coverage:**
+
+- FIFO: 13 tests ✅
+- Priority: 13 tests ✅
+- Bounded: 12 tests ✅
+- Async: 12 tests ✅
+- Helpers: 11 tests ✅
+- Integration: 8 tests ✅
+- **Total: 62 tests passing**
+
+**Documentation:**
+
+- Complete README.md with all mailbox types
+- API reference for all methods
+- Performance characteristics (O notation)
+- 7 example files with 20+ examples
+- Integration examples with components
 
 ---
 
@@ -712,6 +756,7 @@ This document outlines the complete implementation plan for ServiceJS, organized
 **Status:** ✅ Complete - Request/Reply and Pub/Sub implemented as separate packages
 
 **Note:** Communication patterns were implemented as separate packages instead of a single @servicejs/patterns package:
+
 - @servicejs/request-reply - RPC-style request-response messaging
 - @servicejs/pub-sub - Topic-based publish/subscribe messaging
 
@@ -901,25 +946,38 @@ This document outlines the complete implementation plan for ServiceJS, organized
 ### Summary of Completed Work
 
 **Packages Implemented:**
+
 - @servicejs/core - Complete core framework (URN, Message, Capability, Reducer, Effect, Component)
-- @servicejs/mailbox - Three mailbox types (FIFO, Priority, Bounded)
+- @servicejs/mailbox - Four mailbox types (FIFO, Priority, Bounded, Async) + Helper utilities
 - @servicejs/request-reply - RPC-style request-response pattern
 - @servicejs/pub-sub - Topic-based publish/subscribe pattern
 
 **Test Coverage:**
+
 - Core: 94 tests passing ✅
-- Mailbox: 38 tests passing (13 FIFO + 13 Priority + 12 Bounded) ✅
+- Mailbox: 62 tests passing (13 FIFO + 13 Priority + 12 Bounded + 12 Async + 11 Helpers + 8 Integration) ✅
 - Request-Reply: 9 tests passing ✅
 - Pub-Sub: 19 tests passing ✅
-- **Total: 160 tests passing**
+- **Total: 184 tests passing**
+
+**Integration Examples:**
+
+- Counter with FIFO mailbox ✅
+- Task scheduler with priority mailbox ✅
+- Key-value store with request/reply ✅
+- Event bus with pub/sub ✅
+- Complete task management application (all patterns together) ✅
 
 **Documentation:**
+
 - Complete README.md for all four packages ✅
 - Comprehensive API documentation with examples ✅
 - Usage patterns and best practices ✅
-- Examples directory with working code for all packages ✅
+- 12+ example files with 40+ working examples ✅
+- Integration examples demonstrating real-world usage ✅
 
 **Package Structure:**
+
 - All packages follow one export per file pattern ✅
 - Consistent package.json structure ✅
 - TypeScript with strict type checking ✅
@@ -2805,12 +2863,14 @@ The following packages were implemented during Phase 1 but were not in the origi
 ### Notes
 
 These additional packages were implemented to:
+
 1. Provide comprehensive type-level programming capabilities
 2. Support advanced functional programming patterns
 3. Enable robust configuration and dependency injection
 4. Demonstrate the full power of the HKT system
 
 All packages follow the same quality standards:
+
 - Complete implementations with full type safety
 - Comprehensive test coverage
 - Detailed README documentation with examples
