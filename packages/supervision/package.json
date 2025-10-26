@@ -1,0 +1,41 @@
+{
+  "name": "@servicejs/supervision",
+  "version": "0.1.0",
+  "description": "Supervision pattern for fault-tolerant ServiceJS components",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/core": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "servicejs",
+    "supervision",
+    "fault-tolerance",
+    "error-recovery",
+    "resilience"
+  ],
+  "author": "ServiceJS Contributors",
+  "license": "MIT"
+}
