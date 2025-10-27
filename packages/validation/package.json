@@ -31,10 +31,21 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@servicejs/hkt-core": "workspace:*"
+    "@servicejs/core": "workspace:*",
+    "@servicejs/hkt-core": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "peerDependencies": {
+    "zod": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "tsup": "^8.0.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "zod": "^3.23.0"
   }
 }

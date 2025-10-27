@@ -645,12 +645,21 @@
       "name": "@servicejs/validation",
       "version": "0.1.0",
       "dependencies": {
+        "@servicejs/core": "workspace:*",
         "@servicejs/hkt-core": "workspace:*",
+        "@servicejs/result": "workspace:*",
       },
       "devDependencies": {
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",
+        "zod": "^3.23.0",
       },
+      "peerDependencies": {
+        "zod": "^3.0.0",
+      },
+      "optionalPeers": [
+        "zod",
+      ],
     },
   },
   "packages": {

@@ -59,3 +59,21 @@ export {
   traverse,
   sequence,
 } from './validation.js';
+
+// Schema validation
+export type { MessageSchema, SchemaError } from './schema.js';
+export {
+  SchemaValidationError,
+  createSchema,
+  createPredicateSchema,
+} from './schema.js';
+
+// Zod integration
+export { createZodSchema, isZodType } from './zod.js';
+
+// Validated capabilities
+export {
+  withValidation,
+  withValidationFilter,
+  withValidationTransform,
+} from './capability.js';
