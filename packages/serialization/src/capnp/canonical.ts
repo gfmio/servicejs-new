@@ -72,6 +72,9 @@ export const isCanonical = (message: CapnpMessage): boolean => {
   }
 
   const segment = message.segments[0];
+  if (!segment) {
+    return false;
+  }
 
   // Check for far pointers (not allowed in canonical form)
   if (hasFarPointers(segment)) {
@@ -110,10 +113,10 @@ const hasFarPointers = (segment: CapnpSegment): boolean => {
  * This is a simplified check - a full implementation would need
  * to traverse the pointer graph.
  *
- * @param segment - Segment to check
+ * @param _segment - Segment to check (unused in current implementation)
  * @returns True if segment has gaps
  */
-const hasGaps = (segment: CapnpSegment): boolean => {
+const hasGaps = (_segment: CapnpSegment): boolean => {
   // For now, we assume no gaps if segment is tightly packed
   // A full implementation would traverse all pointers and check
   // for unreferenced space
@@ -135,6 +138,9 @@ export const hashCanonical = async (message: CapnpMessage): Promise<Uint8Array> 
   }
 
   const segment = message.segments[0];
+  if (!segment) {
+    throw new Error('Cannot hash empty message');
+  }
   const data = new Uint8Array(segment.data.buffer, 0, segment.position);
 
   // Use Web Crypto API if available, otherwise use a simple hash
@@ -159,7 +165,10 @@ export const hashCanonical = async (message: CapnpMessage): Promise<Uint8Array> 
 const simpleHash = (data: Uint8Array): Uint8Array => {
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
-    hash = ((hash << 5) - hash + data[i]) | 0;
+    const byte = data[i];
+    if (byte !== undefined) {
+      hash = ((hash << 5) - hash + byte) | 0;
+    }
   }
   const result = new Uint8Array(32);
   for (let i = 0; i < 32; i++) {
@@ -190,6 +199,9 @@ export const verifySignature = async (
   }
 
   const segment = message.segments[0];
+  if (!segment) {
+    throw new Error('Cannot verify signature on empty message');
+  }
   const data = new Uint8Array(segment.data.buffer, 0, segment.position);
 
   try {

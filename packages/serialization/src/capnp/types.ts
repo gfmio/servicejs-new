@@ -96,6 +96,28 @@ export interface CapnpAnyPointerType {
 }
 
 /**
+ * Cap'n Proto generic parameter reference (e.g., T in struct Foo<T>)
+ */
+export interface CapnpGenericParameterType {
+  kind: 'genericParameter';
+  /** Parameter name */
+  name: string;
+  /** Parameter index */
+  index: number;
+}
+
+/**
+ * Cap'n Proto bound generic type (e.g., List<Int32>)
+ */
+export interface CapnpBoundGenericType {
+  kind: 'boundGeneric';
+  /** Base schema with generic parameters */
+  schema: CapnpSchema;
+  /** Type arguments bound to generic parameters */
+  typeArguments: CapnpType[];
+}
+
+/**
  * Complete Cap'n Proto type
  */
 export type CapnpType =
@@ -105,7 +127,9 @@ export type CapnpType =
   | CapnpStructType
   | CapnpUnionType
   | CapnpGroupType
-  | CapnpAnyPointerType;
+  | CapnpAnyPointerType
+  | CapnpGenericParameterType
+  | CapnpBoundGenericType;
 
 /**
  * Cap'n Proto field definition

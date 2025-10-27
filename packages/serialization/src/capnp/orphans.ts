@@ -44,6 +44,9 @@ export const createOrphan = (
  */
 export const adoptOrphan = (message: CapnpMessage, orphan: CapnpOrphan): number => {
   const targetSegment = message.segments[0];
+  if (!targetSegment) {
+    throw new Error('Cannot adopt orphan into empty message');
+  }
 
   // Allocate space in target segment
   const targetOffset = targetSegment.position;

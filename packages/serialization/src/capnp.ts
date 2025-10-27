@@ -51,6 +51,8 @@ export type {
   CapnpUnionType,
   CapnpGroupType,
   CapnpAnyPointerType,
+  CapnpGenericParameterType,
+  CapnpBoundGenericType,
   CapnpConstant,
   CapnpAnnotation,
   CapnpGenericParameter,
@@ -192,6 +194,26 @@ export {
   getOrphanSize,
   getOrphanType,
 } from './capnp/orphans.js';
+export {
+  genericParameter,
+  bindGeneric,
+  substituteType,
+  substituteSchema,
+  substituteField,
+  instantiateGeneric,
+  isGenericType,
+  isGenericSchema,
+  validateBoundGeneric,
+} from './capnp/generics.js';
+export {
+  canUpgradeList,
+  upgradePrimitiveToStruct,
+  upgradePrimitiveList,
+  inferElementType,
+  getElementSizeCode,
+  isPrimitiveType,
+  isUpgradeableStruct,
+} from './capnp/list-upgrade.js';
 
 export const createCapnpSchema = (config: {
   name: string;

@@ -18,7 +18,10 @@ import type {
   CapnpUnionType,
   CapnpGroupType,
   CapnpAnyPointerType,
+  CapnpGenericParameterType,
+  CapnpBoundGenericType,
 } from './types.js';
+import { instantiateGeneric } from './generics.js';
 
 /**
  * Cap'n Proto constants
@@ -703,6 +706,30 @@ export const writeStruct = (
             segment.data.setUint32(pointerOffset + 4, 0, true);
           }
         }
+      } else if (field.type.kind === 'genericParameter') {
+        // Generic parameter - cannot encode uninstantiated generic types
+        throw new Error(
+          `Cannot encode generic parameter ${(field.type as CapnpGenericParameterType).name}. ` +
+          `Generic types must be instantiated before encoding.`
+        );
+      } else if (field.type.kind === 'boundGeneric') {
+        // Bound generic type - instantiate and encode as struct
+        const boundType = field.type as CapnpBoundGenericType;
+        if (fieldValue) {
+          const instantiatedSchema = instantiateGeneric(
+            boundType.schema,
+            boundType.typeArguments
+          );
+          const nestedOffset = writeStruct(segment, 0, instantiatedSchema, fieldValue);
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          writeStructPointer(
+            segment,
+            pointerOffset,
+            nestedOffset,
+            instantiatedSchema.dataWordCount,
+            instantiatedSchema.pointerCount
+          );
+        }
       }
     }
   }
@@ -892,6 +919,27 @@ export const readStruct = (
             pointerBytes[i] = segment.data.getUint8(pointerOffset + i);
           }
           result[field.name] = pointerBytes;
+        } catch {
+          result[field.name] = field.defaultValue ?? null;
+        }
+      } else if (field.type.kind === 'genericParameter') {
+        // Generic parameter - cannot decode uninstantiated generic types
+        throw new Error(
+          `Cannot decode generic parameter ${(field.type as CapnpGenericParameterType).name}. ` +
+          `Generic types must be instantiated before decoding.`
+        );
+      } else if (field.type.kind === 'boundGeneric') {
+        // Bound generic type - instantiate and decode as struct
+        const boundType = field.type as CapnpBoundGenericType;
+        try {
+          const instantiatedSchema = instantiateGeneric(
+            boundType.schema,
+            boundType.typeArguments
+          );
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          const pointer = segment.data.getUint32(pointerOffset, true);
+          const nestedOffset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+          result[field.name] = readStruct(segment, nestedOffset, instantiatedSchema);
         } catch {
           result[field.name] = field.defaultValue ?? null;
         }
