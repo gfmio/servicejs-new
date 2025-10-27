@@ -35,3 +35,29 @@ export { serializationError } from './serializer.js';
 // JSON serializer
 export type { JsonSerializerOptions } from './json.js';
 export { createJsonSerializer, jsonSerializer } from './json.js';
+
+// MessagePack serializer
+export type { MessagePackSerializerOptions } from './msgpack.js';
+export { createMessagePackSerializer, messagePackSerializer } from './msgpack.js';
+
+// FlatBuffers serializer
+export type {
+  FlatBuffersSchema,
+  FlatBuffersSerializerOptions,
+  DynamicFieldType,
+  DynamicField,
+  DynamicSchemaConfig,
+} from './flatbuffers.js';
+export {
+  createFlatBuffersSerializer,
+  createDynamicFlatBuffersSchema,
+} from './flatbuffers.js';
+
+// Cap'n Proto serializer
+export type { CapnpSchema, CapnpField } from './capnp.js';
+export {
+  createCapnpSchema,
+  createCapnpSerializer,
+  generateTypeScriptCode,
+  parseCapnpSchema,
+} from './capnp.js';
