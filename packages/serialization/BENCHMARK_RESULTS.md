@@ -164,6 +164,125 @@ We compared **eight serialization formats** for ServiceJS, including both runtim
 
 ---
 
+## Field Access Performance (Zero-Copy vs Native Objects)
+
+Beyond serialization/deserialization, we measured the **actual cost of accessing fields** on pre-created objects. This shows the true zero-copy performance characteristics when working with data already in memory.
+
+### Test Setup
+- **100 pre-created objects** in each format (JS, Cap'n Proto, FlatBuffers)
+- **10,000 iterations** reading all fields from all messages
+- **10,000 iterations** writing fields (where supported)
+- Measures direct field access cost, not serialization
+
+### Results: Simple Messages
+
+| Format | Read (ms) | Write (ms) | Total (ms) | Memory (bytes) | Read vs JS | Write vs JS |
+|--------|-----------|------------|------------|----------------|------------|-------------|
+| **JavaScript Objects** | **4.19** | **3.12** | **7.32** | 8,380 | **1.00x** | **1.00x** |
+| Cap'n Proto (Generated) | 96.71 | 7.12 | 103.83 | 9,600 | 23.06x | 2.28x |
+| FlatBuffers (Compiled) | 130.03 | N/A | 130.03 | 5,992 | 31.01x | N/A |
+
+**Analysis**:
+- **Native JS 23-31x faster** for reading fields
+- Cap'n Proto supports in-place writes (2.3x slower than JS)
+- FlatBuffers is read-only (requires full rebuild to change data)
+
+### Results: Complex Messages
+
+| Format | Read (ms) | Write (ms) | Total (ms) | Memory (bytes) | Read vs JS | Write vs JS |
+|--------|-----------|------------|------------|----------------|------------|-------------|
+| **JavaScript Objects** | **5.03** | **4.23** | **9.25** | 28,140 | **1.00x** | **1.00x** |
+| Cap'n Proto (Generated) | 711.39 | 6.58 | 717.97 | 26,420 | 141.54x | 1.56x |
+| FlatBuffers (Compiled) | 847.63 | N/A | 847.63 | 23,984 | 168.65x | N/A |
+
+**Analysis**:
+- **Native JS 142-169x faster** for reading nested fields
+- Overhead increases dramatically with nested structures
+- Pointer following and DataView bounds checking add up
+- Binary formats have more predictable memory layout
+
+### Key Insights
+
+#### Why Native JS Objects Win
+
+1. **V8/JSC Inline Caches**: JavaScript engines optimize property access to near constant-time
+2. **No Bounds Checking**: Direct memory access without safety checks
+3. **Memory Locality**: V8 optimizes object layout for fast access
+4. **No Indirection**: Direct pointers vs following Cap'n Proto/FlatBuffers pointers
+
+#### Why Binary Formats Can Still Win
+
+The field access benchmark shows **worst case** for binary formats (reading ALL fields repeatedly). Binary formats excel when:
+
+1. **Network Data**: Data arrives in binary format - no conversion cost
+   - Serialization benchmark: Cap'n Proto takes 8-30ms to serialize
+   - If data comes pre-serialized, you save this entire cost
+   - Can read directly from network buffer
+
+2. **Selective Field Access**: Only reading a few fields from large messages
+   - If you only need 2 fields from a 100-field message:
+     - JS Objects: Pay for deserializing all 100 fields
+     - Cap'n Proto: Only pay for the 2 fields you access
+   - Our benchmark reads ALL fields (worst case for binary formats)
+
+3. **Memory Predictability**: Fixed, predictable memory layout
+   - Cap'n Proto: Always 88 bytes for SimpleMessage
+   - JS Objects: Variable size depending on V8 internal structure
+   - Important for embedded systems or memory-constrained environments
+
+4. **Cross-Language**: Zero-copy across language boundaries
+   - Send Cap'n Proto buffer to Rust/C++/Go without conversion
+   - JS Objects require serialization at boundary
+
+5. **Lazy Deserialization**: Don't pay for data you don't use
+   - Parse message header, skip body if not needed
+   - JS Objects: Parse everything upfront
+
+#### Performance Model
+
+```
+Total Cost = Serialization + Field Access + Deserialization
+
+Scenario 1: All fields, in-process
+  JS:     0ms (no serialization) + 5ms (field access) + 0ms = 5ms ✅ BEST
+  Cap'n:  30ms (serialization) + 711ms (field access) + 13ms = 754ms
+
+Scenario 2: All fields, from network
+  JS:     13ms (deserialize JSON) + 5ms (field access) + 0ms = 18ms ✅ BEST
+  Cap'n:  0ms (already binary) + 711ms (field access) + 13ms = 724ms
+
+Scenario 3: Only 2 fields, from network
+  JS:     13ms (deserialize all) + 0.1ms (2 fields) + 0ms = 13.1ms
+  Cap'n:  0ms (already binary) + 10ms (2 fields) + 0ms = 10ms ✅ BEST
+
+Scenario 4: Forward to another service
+  JS:     13ms (deserialize) + 0ms + 12ms (serialize) = 25ms
+  Cap'n:  0ms + 0ms + 0ms (forward raw buffer) = 0ms ✅ BEST
+```
+
+### Recommendations
+
+**Use JavaScript Objects when:**
+- Working with data entirely in JavaScript
+- Accessing most/all fields frequently
+- Don't need network serialization
+- Performance is critical
+
+**Use Binary Formats (Cap'n Proto/FlatBuffers) when:**
+- Receiving data from network (already binary)
+- Only accessing a few fields from large messages
+- Forwarding messages without processing
+- Cross-language compatibility needed
+- Memory layout predictability matters
+
+**Cap'n Proto vs FlatBuffers for Field Access:**
+- **Cap'n Proto**: Supports in-place writes (mutable)
+- **FlatBuffers**: Read-only, must rebuild to change data
+- **Cap'n Proto**: Better for interactive workloads
+- **FlatBuffers**: Better for truly read-only scenarios
+
+---
+
 ## Analysis
 
 ### Performance Characteristics
@@ -441,9 +560,11 @@ bun run tests/benchmark.ts
 1. ~~Test with compiled FlatBuffers schemas~~ ✅ **DONE**
 2. ~~Build Cap'n Proto code generator~~ ✅ **DONE**
 3. ~~Add packed encoding to generated Cap'n Proto~~ ✅ **DONE**
-4. **Add Protobuf** for comparison
-5. **Test cross-runtime** (Node.js, Deno, browsers)
-6. **Add memory usage profiling**
-7. **Test with real-world ServiceJS patterns**
-8. **Optimize generated code** - Further improve performance
-9. **Add streaming support** - For very large messages
+4. ~~Add field access benchmarks (zero-copy performance)~~ ✅ **DONE**
+5. **Add Protobuf** for comparison
+6. **Test cross-runtime** (Node.js, Deno, browsers)
+7. **Add memory usage profiling** (heap snapshots, GC pressure)
+8. **Test with real-world ServiceJS patterns**
+9. **Optimize generated code** - Further improve performance
+10. **Add streaming support** - For very large messages
+11. **Benchmark selective field access** - Show zero-copy advantages
