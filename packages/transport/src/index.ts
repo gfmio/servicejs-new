@@ -1,0 +1,33 @@
+/**
+ * @servicejs/transport - Location-Transparent Transports
+ *
+ * Provides transport abstractions for local, worker, and network communication.
+ */
+
+// Transport abstraction
+export type {
+  Transport,
+  MessageEnvelope,
+  TransportError,
+  TransportFactory,
+} from './transport.js';
+
+// Serialization
+export type { Serializer } from './serialization.js';
+export {
+  createSerializer,
+  createJsonSerializer,
+  createStructuredCloneSerializer,
+} from './serialization.js';
+
+// Local transport
+export type { LocalTransportConfig } from './localTransport.js';
+export { createLocalTransport, getLocalTransportRegistry } from './localTransport.js';
+
+// Worker transport
+export type { WorkerLike, WorkerTransportConfig } from './workerTransport.js';
+export { createWorkerTransport } from './workerTransport.js';
+
+// Network transport
+export type { NetworkTransportConfig } from './networkTransport.js';
+export { createNetworkTransport } from './networkTransport.js';

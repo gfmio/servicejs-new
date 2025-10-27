@@ -1,0 +1,43 @@
+{
+  "name": "@servicejs/transport",
+  "version": "0.1.0",
+  "description": "Location-transparent transports for ServiceJS - local, worker, and network communication",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "transport",
+    "websocket",
+    "worker",
+    "serialization",
+    "location-transparent"
+  ],
+  "author": "ServiceJS Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/core": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "@servicejs/core": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  }
+}
