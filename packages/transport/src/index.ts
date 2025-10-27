@@ -31,6 +31,16 @@ export { createWorkerTransport } from './workerTransport.js';
 // Network transport
 export type { NetworkTransportConfig } from './networkTransport.js';
 export { createNetworkTransport } from './networkTransport.js';
+// Shared memory transport
+export type {
+  RingBufferConfig,
+  SharedMemoryTransportConfig,
+} from './sharedMemoryTransport.js';
+export {
+  RingBuffer,
+  createSharedBuffer,
+  createSharedMemoryTransport,
+} from './sharedMemoryTransport.js';
 
 // Transport utilities
 export type {

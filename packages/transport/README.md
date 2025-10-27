@@ -8,6 +8,7 @@ Location-transparent transports for ServiceJS - local, worker, and network commu
 - **Unified Interface**: Single API works across all transport types
 - **Message Envelope**: Standardized message format with routing metadata
 - **Serialization**: Pluggable serializers (JSON, structured clone)
+- **High Performance**: Lock-free shared memory and TCP transports for maximum throughput
 - **Request-Reply**: Built-in support via correlation IDs
 - **Auto-Reconnect**: Configurable automatic reconnection for network transports
 - **Transport Utilities**: Routing, retry logic, timeout protection, and composition
@@ -244,6 +245,88 @@ const transport = createNetworkTransport({
 
 await transport.connect();
 ```
+### createSharedMemoryTransport
+
+Create a high-performance, lock-free transport using SharedArrayBuffer for inter-worker communication.
+
+```typescript
+function createSharedMemoryTransport(config: SharedMemoryTransportConfig): Transport
+```
+
+**Configuration:**
+
+```typescript
+interface SharedMemoryTransportConfig {
+  readonly localUrn: URN;
+  readonly sendBuffer: SharedArrayBuffer;
+  readonly receiveBuffer: SharedArrayBuffer;
+  readonly bufferConfig: RingBufferConfig;
+  readonly serializer?: Serializer;
+  readonly pollInterval?: number;
+}
+
+interface RingBufferConfig {
+  readonly capacity: number;
+  readonly maxMessageSize: number;
+}
+```
+
+**Key Features:**
+
+- **Lock-Free**: Uses atomic operations for thread-safe access without locks
+- **Bi-Directional**: Separate send/receive buffers for full-duplex communication
+- **Ring Buffer**: Efficient circular buffer for message queueing
+- **Zero-Copy**: Messages stay in shared memory until read
+- **High Performance**: Ideal for high-throughput worker communication
+
+**Example:**
+
+```typescript
+import { createSharedBuffer, createSharedMemoryTransport } from '@servicejs/transport';
+
+// In main thread
+const bufferConfig = { capacity: 32, maxMessageSize: 1024 };
+const mainToWorkerBuffer = createSharedBuffer(bufferConfig);
+const workerToMainBuffer = createSharedBuffer(bufferConfig);
+
+const mainTransport = createSharedMemoryTransport({
+  localUrn: 'urn:main:app',
+  sendBuffer: mainToWorkerBuffer,
+  receiveBuffer: workerToMainBuffer,
+  bufferConfig,
+  pollInterval: 10, // Poll every 10ms
+});
+
+// Pass buffers to worker (note reversed order)
+worker.postMessage({ mainToWorkerBuffer, workerToMainBuffer });
+
+await mainTransport.connect();
+
+// In worker
+const workerTransport = createSharedMemoryTransport({
+  localUrn: 'urn:worker:processor',
+  sendBuffer: workerToMainBuffer,  // Reversed
+  receiveBuffer: mainToWorkerBuffer, // Reversed
+  bufferConfig,
+  pollInterval: 10,
+});
+
+await workerTransport.connect();
+```
+
+**When to Use:**
+
+- High-frequency communication between main thread and workers
+- Low-latency messaging requirements
+- Predictable performance needs (no GC pauses)
+- Environments with SharedArrayBuffer support (modern browsers, Node.js, Bun, Deno)
+
+**Limitations:**
+
+- Requires SharedArrayBuffer support (not available in all environments)
+- Fixed buffer size (messages dropped if buffer full)
+- Separate buffers needed for each direction
+- Polling overhead (configurable via `pollInterval`)
 
 ### Serialization
 
