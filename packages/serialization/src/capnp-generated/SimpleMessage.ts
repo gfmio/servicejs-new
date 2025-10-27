@@ -18,10 +18,17 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class SimpleMessage {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = 9 * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 
@@ -34,19 +41,15 @@ export class SimpleMessage {
   }
 
   get name(): string {
-    const dataSize = 9 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set name(value: string) {
-    const dataSize = 9 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 
@@ -86,13 +89,17 @@ export class SimpleMessage {
     return structOffset;
   }
 
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new SimpleMessage(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): SimpleMessage {
+    return new SimpleMessage(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
-      id: instance.id,
-      name: instance.name,
-      active: instance.active,
-      score: instance.score,
+      id: this.id,
+      name: this.name,
+      active: this.active,
+      score: this.score,
     };
   }
 }

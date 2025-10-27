@@ -40,7 +40,8 @@ export const simpleMessageGeneratedSerializer = (): Serializer<SimpleMessageData
     try {
       const segment = { data: new DataView(data.buffer, data.byteOffset, data.byteLength), position: data.byteLength };
       const result = SimpleMessage.deserialize(segment, 0);
-      return ok(result as SimpleMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as SimpleMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated) deserialization failed', error));
     }
@@ -83,7 +84,8 @@ export const complexMessageGeneratedSerializer = (): Serializer<ComplexMessageDa
     try {
       const segment = { data: new DataView(data.buffer, data.byteOffset, data.byteLength), position: data.byteLength };
       const result = ComplexMessage.deserialize(segment, 0);
-      return ok(result as ComplexMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as ComplexMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated) deserialization failed', error));
     }
@@ -116,7 +118,8 @@ export const largeMessageGeneratedSerializer = (): Serializer<LargeMessageData> 
     try {
       const segment = { data: new DataView(data.buffer, data.byteOffset, data.byteLength), position: data.byteLength };
       const result = LargeMessage.deserialize(segment, 0);
-      return ok(result as LargeMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as LargeMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated) deserialization failed', error));
     }
@@ -148,7 +151,8 @@ export const simpleMessageGeneratedPackedSerializer = (): Serializer<SimpleMessa
       const unpacked = unpack(data);
       const segment = { data: new DataView(unpacked.buffer, unpacked.byteOffset, unpacked.byteLength), position: unpacked.byteLength };
       const result = SimpleMessage.deserialize(segment, 0);
-      return ok(result as SimpleMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as SimpleMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated + Packed) deserialization failed', error));
     }
@@ -176,7 +180,8 @@ export const complexMessageGeneratedPackedSerializer = (): Serializer<ComplexMes
       const unpacked = unpack(data);
       const segment = { data: new DataView(unpacked.buffer, unpacked.byteOffset, unpacked.byteLength), position: unpacked.byteLength };
       const result = ComplexMessage.deserialize(segment, 0);
-      return ok(result as ComplexMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as ComplexMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated + Packed) deserialization failed', error));
     }
@@ -204,7 +209,8 @@ export const largeMessageGeneratedPackedSerializer = (): Serializer<LargeMessage
       const unpacked = unpack(data);
       const segment = { data: new DataView(unpacked.buffer, unpacked.byteOffset, unpacked.byteLength), position: unpacked.byteLength };
       const result = LargeMessage.deserialize(segment, 0);
-      return ok(result as LargeMessageData);
+      // Convert to plain object for compatibility
+      return ok(result.toObject() as LargeMessageData);
     } catch (error) {
       return err(serializationError('Cap\'n Proto (Generated + Packed) deserialization failed', error));
     }

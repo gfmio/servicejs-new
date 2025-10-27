@@ -21,10 +21,17 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class ComplexMessage {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = 9 * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 
@@ -45,8 +52,7 @@ export class ComplexMessage {
   }
 
   get user(): User | null {
-    const dataSize = 9 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 0) return null; // Not a struct pointer
     const targetOffset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
@@ -54,8 +60,7 @@ export class ComplexMessage {
   }
 
   get tags(): string[] {
-    const dataSize = 9 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 1 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 1 * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, "text");
   }
 
@@ -64,8 +69,7 @@ export class ComplexMessage {
   }
 
   get metadata(): Metadata | null {
-    const dataSize = 9 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 2 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 2 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 0) return null; // Not a struct pointer
     const targetOffset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
@@ -102,14 +106,18 @@ export class ComplexMessage {
     return structOffset;
   }
 
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new ComplexMessage(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): ComplexMessage {
+    return new ComplexMessage(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
-      id: instance.id,
-      timestamp: instance.timestamp,
-      user: instance.user ? User.deserialize(instance.user.segment, instance.user.offset) : null,
-      tags: instance.tags,
-      metadata: instance.metadata ? Metadata.deserialize(instance.metadata.segment, instance.metadata.offset) : null,
+      id: this.id,
+      timestamp: this.timestamp,
+      user: this.user?.toObject() ?? null,
+      tags: this.tags,
+      metadata: this.metadata?.toObject() ?? null,
     };
   }
 }

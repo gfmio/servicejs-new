@@ -18,27 +18,30 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class Metadata {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = 1 * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 
   get source(): string {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set source(value: string) {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 
@@ -51,8 +54,7 @@ export class Metadata {
   }
 
   get flags(): boolean[] {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 1 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 1 * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, "bool");
   }
 
@@ -80,12 +82,16 @@ export class Metadata {
     return structOffset;
   }
 
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new Metadata(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): Metadata {
+    return new Metadata(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
-      source: instance.source,
-      priority: instance.priority,
-      flags: instance.flags,
+      source: this.source,
+      priority: this.priority,
+      flags: this.flags,
     };
   }
 }

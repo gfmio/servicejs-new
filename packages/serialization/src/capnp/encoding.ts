@@ -259,27 +259,27 @@ export const readPrimitive = (
 };
 
 /**
- * Write text to segment
+ * Write text to segment (optimized - single encoding, bulk copy)
  */
-export const writeText = (segment: CapnpSegment, text: string): number => {
+export const writeText = (segment: CapnpSegment, text: string): { offset: number; byteLength: number } => {
   const encoder = new TextEncoder();
-  const bytes = encoder.encode(text);
+  const bytes = encoder.encode(text);  // Encode only once
   const offset = allocate(segment, bytes.length + 1); // +1 for null terminator
 
-  for (let i = 0; i < bytes.length; i++) {
-    segment.data.setUint8(offset + i, bytes[i]);
-  }
+  // Use set() for bulk copy instead of loop
+  const target = new Uint8Array(segment.data.buffer, segment.data.byteOffset + offset, bytes.length);
+  target.set(bytes);
   segment.data.setUint8(offset + bytes.length, 0); // null terminator
 
   // Align to word boundary
   const padding = (BYTES_PER_WORD - ((bytes.length + 1) % BYTES_PER_WORD)) % BYTES_PER_WORD;
   allocate(segment, padding);
 
-  return offset;
+  return { offset, byteLength: bytes.length };
 };
 
 /**
- * Read text from segment
+ * Read text from segment (optimized - zero-copy with subarray)
  */
 export const readText = (segment: CapnpSegment, pointerOffset: number): string => {
   const pointer = segment.data.getUint32(pointerOffset, true);
@@ -287,10 +287,12 @@ export const readText = (segment: CapnpSegment, pointerOffset: number): string =
   const lengthInfo = segment.data.getUint32(pointerOffset + 4, true);
   const elementCount = lengthInfo >> 3;
 
-  const bytes = new Uint8Array(elementCount - 1); // -1 for null terminator
-  for (let i = 0; i < elementCount - 1; i++) {
-    bytes[i] = segment.data.getUint8(offset + i);
-  }
+  // Use subarray for zero-copy view into buffer
+  const bytes = new Uint8Array(
+    segment.data.buffer,
+    segment.data.byteOffset + offset,
+    elementCount - 1  // -1 for null terminator
+  );
 
   return new TextDecoder().decode(bytes);
 };
@@ -405,9 +407,9 @@ export const writeList = (
       for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
         if (elementType === 'text') {
-          const textOffset = writeText(segment, element);
+          const { offset: textOffset, byteLength } = writeText(segment, element);
           const pointerOffset = listOffset + i * POINTER_SIZE_BYTES;
-          writeListPointer(segment, pointerOffset, textOffset, element.length + 1, 2);
+          writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
         }
       }
 
@@ -428,13 +430,61 @@ export const writeList = (
 
       return listOffset;
     } else {
-      // Primitive number list
+      // Primitive number list - optimized with TypedArray bulk copy
       const elementSize = getTypeSize(elementType);
       const listSize = elements.length * elementSize;
       const listOffset = allocate(segment, listSize);
 
-      for (let i = 0; i < elements.length; i++) {
-        writePrimitive(segment, listOffset + i * elementSize, elementType, elements[i]);
+      // Use TypedArray for bulk copy when possible
+      const bufferOffset = segment.data.byteOffset + listOffset;
+      switch (elementType) {
+        case 'int8': {
+          const view = new Int8Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'uint8': {
+          const view = new Uint8Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'int16': {
+          const view = new Int16Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'uint16': {
+          const view = new Uint16Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'int32': {
+          const view = new Int32Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'uint32': {
+          const view = new Uint32Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'float32': {
+          const view = new Float32Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        case 'float64':
+        case 'int64':
+        case 'uint64': {
+          const view = new Float64Array(segment.data.buffer, bufferOffset, elements.length);
+          view.set(elements);
+          break;
+        }
+        default:
+          // Fallback to loop for unsupported types
+          for (let i = 0; i < elements.length; i++) {
+            writePrimitive(segment, listOffset + i * elementSize, elementType, elements[i]);
+          }
       }
 
       return listOffset;
@@ -520,10 +570,34 @@ export const readList = (
         result.push((byte & (1 << bitIndex)) !== 0);
       }
     } else {
-      // Primitive number list
-      const elementSize = getTypeSize(elementType);
-      for (let i = 0; i < elementCount; i++) {
-        result.push(readPrimitive(segment, offset + i * elementSize, elementType));
+      // Primitive number list - optimized with TypedArray views
+      const bufferOffset = segment.data.byteOffset + offset;
+      switch (elementType) {
+        case 'int8':
+          return Array.from(new Int8Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'uint8':
+          return Array.from(new Uint8Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'int16':
+          return Array.from(new Int16Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'uint16':
+          return Array.from(new Uint16Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'int32':
+          return Array.from(new Int32Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'uint32':
+          return Array.from(new Uint32Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'float32':
+          return Array.from(new Float32Array(segment.data.buffer, bufferOffset, elementCount));
+        case 'float64':
+        case 'int64':
+        case 'uint64':
+          return Array.from(new Float64Array(segment.data.buffer, bufferOffset, elementCount));
+        default:
+          // Fallback to loop for unsupported types
+          const elementSize = getTypeSize(elementType);
+          for (let i = 0; i < elementCount; i++) {
+            result.push(readPrimitive(segment, offset + i * elementSize, elementType));
+          }
+          return result;
       }
     }
   } else if (typeof elementType === 'object') {
@@ -606,9 +680,7 @@ export const writeStruct = (
       if (field.type === 'text') {
         // Text field
         if (typeof fieldValue === 'string') {
-          const encoder = new TextEncoder();
-          const byteLength = encoder.encode(fieldValue).length;
-          const textOffset = writeText(segment, fieldValue);
+          const { offset: textOffset, byteLength } = writeText(segment, fieldValue);
           const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
           writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
         }
@@ -674,9 +746,7 @@ export const writeStruct = (
             if (groupField.type === 'text') {
               // Text field in group
               if (typeof gFieldValue === 'string') {
-                const encoder = new TextEncoder();
-                const byteLength = encoder.encode(gFieldValue).length;
-                const textOffset = writeText(segment, gFieldValue);
+                const { offset: textOffset, byteLength } = writeText(segment, gFieldValue);
                 const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
                 writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
               }

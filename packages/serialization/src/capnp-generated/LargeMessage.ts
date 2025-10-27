@@ -18,10 +18,17 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class LargeMessage {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = 1 * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 
@@ -34,8 +41,7 @@ export class LargeMessage {
   }
 
   get coordinates(): number[] {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, "float64");
   }
 
@@ -44,8 +50,7 @@ export class LargeMessage {
   }
 
   get labels(): string[] {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 1 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 1 * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, "text");
   }
 
@@ -54,8 +59,7 @@ export class LargeMessage {
   }
 
   get matrix(): number[][] {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 2 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 2 * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, {"kind":"list","elementType":"float64"});
   }
 
@@ -91,13 +95,17 @@ export class LargeMessage {
     return structOffset;
   }
 
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new LargeMessage(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): LargeMessage {
+    return new LargeMessage(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
-      id: instance.id,
-      coordinates: instance.coordinates,
-      labels: instance.labels,
-      matrix: instance.matrix,
+      id: this.id,
+      coordinates: this.coordinates,
+      labels: this.labels,
+      matrix: this.matrix,
     };
   }
 }

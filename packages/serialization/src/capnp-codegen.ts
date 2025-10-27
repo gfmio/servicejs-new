@@ -57,10 +57,17 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class ${className} {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = ${dataWords} * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 `;
@@ -87,22 +94,18 @@ function generateFieldAccessors(className: string, field: any, dataWords: number
 
   if (typeof fieldType === 'string') {
     if (fieldType === 'text') {
-      // Text field (pointer)
+      // Text field (pointer) - optimized with cached offsets
       return `
   get ${fieldName}(): string {
-    const dataSize = ${dataWords} * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + ${field.slot} * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + ${field.slot} * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set ${fieldName}(value: string) {
-    const dataSize = ${dataWords} * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + ${field.slot} * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + ${field.slot} * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 `;
@@ -120,13 +123,12 @@ function generateFieldAccessors(className: string, field: any, dataWords: number
 `;
     }
   } else if (fieldType.kind === 'list') {
-    // List field
+    // List field - optimized with cached offsets
     const elementType = fieldType.elementType;
     const tsType = getTypeScriptType(elementType);
     return `
   get ${fieldName}(): ${tsType}[] {
-    const dataSize = ${dataWords} * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + ${field.slot} * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + ${field.slot} * POINTER_SIZE_BYTES;
     return readListGeneric(this.segment, pointerOffset, ${JSON.stringify(elementType)});
   }
 
@@ -135,12 +137,11 @@ function generateFieldAccessors(className: string, field: any, dataWords: number
   }
 `;
   } else if (fieldType.kind === 'struct') {
-    // Nested struct field
+    // Nested struct field - optimized with cached offsets
     const nestedClassName = fieldType.schema.name;
     return `
   get ${fieldName}(): ${nestedClassName} | null {
-    const dataSize = ${dataWords} * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + ${field.slot} * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + ${field.slot} * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 0) return null; // Not a struct pointer
     const targetOffset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
@@ -157,6 +158,7 @@ function getPrimitiveAccessors(type: string, byteOffset: number): {
   setter: string;
   defaultValue: string;
 } {
+  // Use DataView directly - V8 is well-optimized for this
   switch (type) {
     case 'bool':
       return {
@@ -318,9 +320,15 @@ function generateSerializeMethod(className: string, schema: CapnpSchema): string
 }
 
 function generateDeserializeMethod(className: string, schema: CapnpSchema): string {
+  // TRUE ZERO-COPY: Return wrapper class directly, not plain object
+  // Users can access fields as needed without deserializing everything upfront
   let code = `
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new ${className}(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): ${className} {
+    return new ${className}(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
 `;
 
@@ -330,9 +338,9 @@ function generateDeserializeMethod(className: string, schema: CapnpSchema): stri
     // Check if this is a nested struct that needs recursive deserialization
     if (typeof fieldType === 'object' && fieldType.kind === 'struct') {
       const nestedClassName = fieldType.schema.name;
-      code += `      ${field.name}: instance.${field.name} ? ${nestedClassName}.deserialize(instance.${field.name}.segment, instance.${field.name}.offset) : null,\n`;
+      code += `      ${field.name}: this.${field.name}?.toObject() ?? null,\n`;
     } else {
-      code += `      ${field.name}: instance.${field.name},\n`;
+      code += `      ${field.name}: this.${field.name},\n`;
     }
   }
 

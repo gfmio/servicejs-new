@@ -18,10 +18,17 @@ const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
 
 export class User {
+  // Cached offsets for performance
+  private readonly dataSize: number;
+  private readonly pointerSection: number;
+
   constructor(
     private segment: CapnpSegment,
     private offset: number
-  ) {}
+  ) {
+    this.dataSize = 1 * BYTES_PER_WORD;
+    this.pointerSection = offset + this.dataSize;
+  }
 
   // Getters and Setters
 
@@ -34,53 +41,41 @@ export class User {
   }
 
   get name(): string {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set name(value: string) {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 0 * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + 0 * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 
   get email(): string {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 1 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 1 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set email(value: string) {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 1 * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + 1 * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 
   get role(): string {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 2 * POINTER_SIZE_BYTES;
+    const pointerOffset = this.pointerSection + 2 * POINTER_SIZE_BYTES;
     const pointer = this.segment.data.getUint32(pointerOffset, true);
     if ((pointer & 3) !== 1) return ''; // Not a list pointer
     return readText(this.segment, pointerOffset);
   }
 
   set role(value: string) {
-    const dataSize = 1 * BYTES_PER_WORD;
-    const pointerOffset = this.offset + dataSize + 2 * POINTER_SIZE_BYTES;
-    const textOffset = writeText(this.segment, value);
-    const encoder = new TextEncoder();
-    const byteLength = encoder.encode(value).length;
+    const pointerOffset = this.pointerSection + 2 * POINTER_SIZE_BYTES;
+    const { offset: textOffset, byteLength } = writeText(this.segment, value);
     writeListPointer(this.segment, pointerOffset, textOffset, byteLength + 1, 2);
   }
 
@@ -104,13 +99,17 @@ export class User {
     return structOffset;
   }
 
-  static deserialize(segment: CapnpSegment, offset: number): any {
-    const instance = new User(segment, offset);
+  static deserialize(segment: CapnpSegment, offset: number): User {
+    return new User(segment, offset);
+  }
+
+  // Helper method for compatibility - converts to plain object
+  toObject(): any {
     return {
-      id: instance.id,
-      name: instance.name,
-      email: instance.email,
-      role: instance.role,
+      id: this.id,
+      name: this.name,
+      email: this.email,
+      role: this.role,
     };
   }
 }
