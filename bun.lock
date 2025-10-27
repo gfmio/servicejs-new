@@ -603,6 +603,17 @@
         "typescript": "^5.3.0",
       },
     },
+    "packages/serialization": {
+      "name": "@servicejs/serialization",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+      },
+    },
     "packages/supervision": {
       "name": "@servicejs/supervision",
       "version": "0.1.0",
@@ -1188,6 +1199,8 @@
     "@servicejs/runtime-tauri": ["@servicejs/runtime-tauri@workspace:packages/runtime-tauri"],
 
     "@servicejs/runtime-web-worker": ["@servicejs/runtime-web-worker@workspace:packages/runtime-web-worker"],
+
+    "@servicejs/serialization": ["@servicejs/serialization@workspace:packages/serialization"],
 
     "@servicejs/supervision": ["@servicejs/supervision@workspace:packages/supervision"],
 
