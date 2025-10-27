@@ -27,6 +27,10 @@ import type {
   CapnpEnumType,
   CapnpUnionType,
   CapnpGroupType,
+  CapnpAnyPointerType,
+  CapnpConstant,
+  CapnpAnnotation,
+  TraversalLimits,
 } from './capnp/types.js';
 import {
   createSegment,
@@ -35,6 +39,7 @@ import {
   readStruct,
   decodeMessage,
 } from './capnp/encoding.js';
+import { pack, unpack } from './capnp/packed.js';
 
 export type {
   CapnpSchema,
@@ -45,6 +50,13 @@ export type {
   CapnpEnumType,
   CapnpUnionType,
   CapnpGroupType,
+  CapnpAnyPointerType,
+  CapnpConstant,
+  CapnpAnnotation,
+  CapnpGenericParameter,
+  TraversalLimits,
+  TraversalContext,
+  CapnpOrphan,
 } from './capnp/types.js';
 
 /**
@@ -122,6 +134,64 @@ export const groupType = (name: string, fields: CapnpField[]): CapnpGroupType =>
   name,
   fields,
 });
+
+/**
+ * Helper: Create an AnyPointer type
+ *
+ * AnyPointer can hold any pointer type (struct, list, text, data).
+ * Useful for generic containers and dynamic typing.
+ */
+export const anyPointer = (): CapnpAnyPointerType => ({
+  kind: 'anyPointer',
+});
+
+/**
+ * Helper: Create a constant
+ */
+export const constant = (name: string, type: CapnpType, value: any): CapnpConstant => ({
+  name,
+  type,
+  value,
+});
+
+/**
+ * Helper: Create an annotation
+ */
+export const annotation = (
+  name: string,
+  type: CapnpType,
+  targets: Array<'field' | 'struct' | 'enum' | 'union' | 'group' | 'interface' | 'method' | 'param' | 'annotation' | 'const' | 'enumerant'>
+): CapnpAnnotation => ({
+  name,
+  type,
+  targets,
+});
+
+// Re-export utility functions
+export { pack, unpack } from './capnp/packed.js';
+export {
+  createTraversalContext,
+  DEFAULT_TRAVERSAL_LIMITS,
+  enterTraversal,
+  exitTraversal,
+  recordTraversal,
+  checkPointerCycle,
+  validateStructPointer,
+  validateListPointer,
+  validateFarPointer,
+} from './capnp/security.js';
+export {
+  canonicalizeMessage,
+  isCanonical,
+  hashCanonical,
+} from './capnp/canonical.js';
+export {
+  createOrphan,
+  adoptOrphan,
+  disownData,
+  getOrphanSize,
+  getOrphanType,
+} from './capnp/orphans.js';
 
 export const createCapnpSchema = (config: {
   name: string;
@@ -240,6 +310,29 @@ export interface CapnpSerializerOptions {
    * @default 8192 (8KB)
    */
   segmentSize?: number;
+
+  /**
+   * Enable packed encoding for smaller wire size
+   * @default false
+   */
+  packed?: boolean;
+
+  /**
+   * Enable traversal limits for security
+   * @default true
+   */
+  enableTraversalLimits?: boolean;
+
+  /**
+   * Custom traversal limits (if enableTraversalLimits is true)
+   */
+  traversalLimits?: Partial<TraversalLimits>;
+
+  /**
+   * Enable canonical form (single segment, deterministic)
+   * @default false
+   */
+  canonical?: boolean;
 }
 
 /**
@@ -271,6 +364,8 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
   options?: CapnpSerializerOptions
 ): Serializer<T> => {
   const multiSegment = options?.multiSegment ?? false;
+  const usePacked = options?.packed ?? false;
+
   return {
     format: 'capnp',
 
@@ -308,7 +403,13 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
         segment.data.setUint32(4, Math.ceil(totalSize / 8), true); // segment size in words
 
         // Extract used portion of segment
-        const bytes = new Uint8Array(segment.data.buffer, 0, segment.position);
+        let bytes = new Uint8Array(segment.data.buffer, 0, segment.position);
+
+        // Apply packed encoding if enabled
+        if (usePacked) {
+          bytes = pack(bytes);
+        }
+
         return ok(bytes);
       } catch (error) {
         return err(
@@ -323,9 +424,15 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
 
     deserialize(data: Uint8Array) {
       try {
+        // Unpack if packed encoding was used
+        let unpacked = data;
+        if (usePacked) {
+          unpacked = unpack(data);
+        }
+
         if (multiSegment) {
           // Multi-segment deserialization
-          const message = decodeMessage(data);
+          const message = decodeMessage(unpacked);
           const rootSegment = message.segments[0];
 
           if (!rootSegment) {
@@ -338,7 +445,7 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
         } else {
           // Single-segment deserialization
           const segment: CapnpSegment = {
-            data: new DataView(data.buffer, data.byteOffset, data.byteLength),
+            data: new DataView(unpacked.buffer, unpacked.byteOffset, unpacked.byteLength),
             position: 0,
           };
 

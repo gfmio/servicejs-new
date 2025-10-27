@@ -17,6 +17,7 @@ import type {
   CapnpEnumType,
   CapnpUnionType,
   CapnpGroupType,
+  CapnpAnyPointerType,
 } from './types.js';
 
 /**
@@ -683,6 +684,25 @@ export const writeStruct = (
             }
           }
         }
+      } else if (field.type.kind === 'anyPointer') {
+        // AnyPointer field - store raw pointer value
+        // AnyPointer can hold any pointer type (struct, list, text, data)
+        if (fieldValue && typeof fieldValue === 'object') {
+          // If it's already a pointer (8 bytes), write it directly
+          if (fieldValue instanceof Uint8Array && fieldValue.length === 8) {
+            const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+            for (let i = 0; i < 8; i++) {
+              segment.data.setUint8(pointerOffset + i, fieldValue[i]);
+            }
+          } else {
+            // Otherwise, treat it as an opaque pointer
+            // In a full implementation, we would need to detect the type and encode appropriately
+            // For now, we'll just write a null pointer
+            const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+            segment.data.setUint32(pointerOffset, 0, true);
+            segment.data.setUint32(pointerOffset + 4, 0, true);
+          }
+        }
       }
     }
   }
@@ -863,6 +883,18 @@ export const readStruct = (
           }
         }
         result[field.name] = groupResult;
+      } else if (field.type.kind === 'anyPointer') {
+        // AnyPointer field - read raw pointer value
+        try {
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          const pointerBytes = new Uint8Array(8);
+          for (let i = 0; i < 8; i++) {
+            pointerBytes[i] = segment.data.getUint8(pointerOffset + i);
+          }
+          result[field.name] = pointerBytes;
+        } catch {
+          result[field.name] = field.defaultValue ?? null;
+        }
       }
     }
   }

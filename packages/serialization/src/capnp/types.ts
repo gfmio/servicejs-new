@@ -89,6 +89,13 @@ export interface CapnpGroupType {
 }
 
 /**
+ * Cap'n Proto AnyPointer type (can hold any pointer type)
+ */
+export interface CapnpAnyPointerType {
+  kind: 'anyPointer';
+}
+
+/**
  * Complete Cap'n Proto type
  */
 export type CapnpType =
@@ -97,7 +104,8 @@ export type CapnpType =
   | CapnpEnumType
   | CapnpStructType
   | CapnpUnionType
-  | CapnpGroupType;
+  | CapnpGroupType
+  | CapnpAnyPointerType;
 
 /**
  * Cap'n Proto field definition
@@ -118,6 +126,40 @@ export interface CapnpField {
 }
 
 /**
+ * Cap'n Proto constant definition
+ */
+export interface CapnpConstant {
+  /** Constant name */
+  name: string;
+  /** Constant type */
+  type: CapnpType;
+  /** Constant value */
+  value: any;
+}
+
+/**
+ * Cap'n Proto annotation definition
+ */
+export interface CapnpAnnotation {
+  /** Annotation name */
+  name: string;
+  /** Annotation type */
+  type: CapnpType;
+  /** Target types (field, struct, enum, etc.) */
+  targets: Array<'field' | 'struct' | 'enum' | 'union' | 'group' | 'interface' | 'method' | 'param' | 'annotation' | 'const' | 'enumerant'>;
+}
+
+/**
+ * Cap'n Proto generic parameter
+ */
+export interface CapnpGenericParameter {
+  /** Parameter name */
+  name: string;
+  /** Index in parameter list */
+  index: number;
+}
+
+/**
  * Cap'n Proto struct schema
  */
 export interface CapnpSchema {
@@ -133,6 +175,12 @@ export interface CapnpSchema {
   pointerCount: number;
   /** Discriminant count (for unions) */
   discriminantCount?: number;
+  /** Constants defined in this schema */
+  constants?: CapnpConstant[];
+  /** Annotations on this schema */
+  annotations?: Map<string, any>;
+  /** Generic parameters */
+  genericParameters?: CapnpGenericParameter[];
 }
 
 /**
@@ -151,4 +199,42 @@ export interface CapnpSegment {
 export interface CapnpMessage {
   /** Message segments */
   segments: CapnpSegment[];
+}
+
+/**
+ * Traversal limits for security
+ */
+export interface TraversalLimits {
+  /** Maximum traversal depth (default: 64) */
+  maxDepth: number;
+  /** Maximum words traversed (default: 8 * 1024 * 1024 = 64MB) */
+  maxWords: number;
+}
+
+/**
+ * Traversal context for tracking limits
+ */
+export interface TraversalContext {
+  /** Current traversal depth */
+  depth: number;
+  /** Words traversed so far */
+  wordsTraversed: number;
+  /** Traversal limits */
+  limits: TraversalLimits;
+  /** Visited pointers (for cycle detection) */
+  visited: Set<string>;
+}
+
+/**
+ * Orphan - detached message data that can be moved between messages
+ */
+export interface CapnpOrphan {
+  /** Segment containing the orphaned data */
+  segment: CapnpSegment;
+  /** Offset of the orphaned data */
+  offset: number;
+  /** Size in bytes */
+  size: number;
+  /** Type of the orphaned data */
+  type: CapnpType;
 }
