@@ -26,6 +26,7 @@ import type {
   CapnpStructType,
   CapnpEnumType,
   CapnpUnionType,
+  CapnpGroupType,
 } from './capnp/types.js';
 import {
   createSegment,
@@ -87,6 +88,37 @@ export const enumType = (
 export const structType = (schema: CapnpSchema): CapnpStructType => ({
   kind: 'struct',
   schema,
+});
+
+/**
+ * Helper: Create a union type
+ */
+export const unionType = (
+  name: string | undefined,
+  tagSlot: number,
+  fields: Array<{ name: string; type: CapnpType; discriminant: number }>
+): CapnpUnionType => {
+  const result: CapnpUnionType = {
+    kind: 'union',
+    tagSlot,
+    fields,
+  };
+  if (name !== undefined) {
+    result.name = name;
+  }
+  return result;
+};
+
+/**
+ * Helper: Create a group type
+ *
+ * Groups are organizational - fields are laid out directly in parent struct.
+ * Groups don't add runtime overhead, just schema organization.
+ */
+export const groupType = (name: string, fields: CapnpField[]): CapnpGroupType => ({
+  kind: 'group',
+  name,
+  fields,
 });
 
 export const createCapnpSchema = (config: {
@@ -219,7 +251,13 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
         const structSize = dataSize + pointerSize;
 
         // Estimate additional space for nested data (strings, lists, structs)
-        let additionalSize = 1024; // Start with 1KB buffer
+        // Use larger buffer for complex schemas with lists/nested structs
+        const hasComplexTypes = schema.fields.some(
+          (f) =>
+            typeof f.type === 'object' &&
+            (f.type.kind === 'list' || f.type.kind === 'struct')
+        );
+        let additionalSize = hasComplexTypes ? 8192 : 2048; // 8KB for complex, 2KB for simple
 
         const segment = createSegment(headerSize + structSize + additionalSize);
 

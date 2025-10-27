@@ -15,6 +15,7 @@ import type {
   CapnpStructType,
   CapnpEnumType,
   CapnpUnionType,
+  CapnpGroupType,
 } from './types.js';
 
 /**
@@ -443,8 +444,43 @@ export const writeStruct = (
 ): void => {
   const dataSize = schema.dataWordCount * BYTES_PER_WORD;
 
+  // Handle unions first - write discriminant and determine which field to write
+  const activeUnionFields = new Set<string>();
+
+  if (schema.unions) {
+    for (const union of schema.unions) {
+      // Find which union field is present in the value
+      let activeField: typeof union.fields[0] | null = null;
+
+      for (const unionField of union.fields) {
+        if (value[unionField.name] !== undefined && value[unionField.name] !== null) {
+          activeField = unionField;
+          break;
+        }
+      }
+
+      if (activeField) {
+        // Write discriminant
+        const discriminantOffset = structOffset + union.tagSlot * 2;
+        segment.data.setUint16(discriminantOffset, activeField.discriminant, true);
+
+        // Mark this field as active so we write it below
+        activeUnionFields.add(activeField.name);
+      } else {
+        // Write discriminant 0 (void/unset)
+        const discriminantOffset = structOffset + union.tagSlot * 2;
+        segment.data.setUint16(discriminantOffset, 0, true);
+      }
+    }
+  }
+
   for (const field of schema.fields) {
     const fieldValue = value[field.name];
+
+    // Skip union fields that are not active
+    if (field.unionIndex !== undefined && !activeUnionFields.has(field.name)) {
+      continue;
+    }
 
     if (typeof field.type === 'string') {
       if (field.type === 'text') {
@@ -506,6 +542,26 @@ export const writeStruct = (
             ? fieldValue
             : field.type.enumerants.find((e) => e.name === fieldValue)?.value ?? 0;
         segment.data.setUint16(offset, enumValue, true);
+      } else if (field.type.kind === 'group') {
+        // Group field - recursively write group fields
+        const groupValue = fieldValue ?? {};
+        for (const groupField of field.type.fields) {
+          const gFieldValue = groupValue[groupField.name];
+          // Recursively handle each field in the group
+          // Groups are transparent - fields are written directly to parent struct
+          if (typeof groupField.type === 'string') {
+            if (groupField.type === 'text' && typeof gFieldValue === 'string') {
+              const encoder = new TextEncoder();
+              const byteLength = encoder.encode(gFieldValue).length;
+              const textOffset = writeText(segment, gFieldValue);
+              const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+              writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
+            } else if (groupField.type !== 'text' && groupField.type !== 'data') {
+              const offset = structOffset + getFieldOffset(groupField);
+              writePrimitive(segment, offset, groupField.type, gFieldValue ?? groupField.defaultValue ?? 0);
+            }
+          }
+        }
       }
     }
   }
@@ -522,7 +578,30 @@ export const readStruct = (
   const result: Record<string, any> = {};
   const dataSize = schema.dataWordCount * BYTES_PER_WORD;
 
+  // Handle unions first - read discriminant to determine which field is active
+  const activeUnionFields = new Set<string>();
+
+  if (schema.unions) {
+    for (const union of schema.unions) {
+      // Read discriminant
+      const discriminantOffset = structOffset + union.tagSlot * 2;
+      const discriminant = segment.data.getUint16(discriminantOffset, true);
+
+      // Find the active field
+      const activeField = union.fields.find((f) => f.discriminant === discriminant);
+
+      if (activeField) {
+        activeUnionFields.add(activeField.name);
+      }
+    }
+  }
+
   for (const field of schema.fields) {
+    // Skip union fields that are not active
+    if (field.unionIndex !== undefined && !activeUnionFields.has(field.name)) {
+      continue;
+    }
+
     if (typeof field.type === 'string') {
       if (field.type === 'text') {
         // Text field
@@ -551,7 +630,18 @@ export const readStruct = (
       } else {
         // Primitive field
         const offset = structOffset + getFieldOffset(field);
-        result[field.name] = readPrimitive(segment, offset, field.type);
+        const value = readPrimitive(segment, offset, field.type);
+        // Apply default value if field is zero/false and has a default
+        const isZeroValue =
+          value === 0 ||
+          value === false ||
+          value === null ||
+          value === undefined;
+        if (field.defaultValue !== undefined && isZeroValue) {
+          result[field.name] = field.defaultValue;
+        } else {
+          result[field.name] = value;
+        }
       }
     } else if (typeof field.type === 'object') {
       if (field.type.kind === 'list') {
@@ -579,6 +669,25 @@ export const readStruct = (
         const enumValue = segment.data.getUint16(offset, true);
         const enumerant = field.type.enumerants.find((e) => e.value === enumValue);
         result[field.name] = enumerant?.name ?? enumValue;
+      } else if (field.type.kind === 'group') {
+        // Group field - recursively read group fields
+        const groupResult: Record<string, any> = {};
+        for (const groupField of field.type.fields) {
+          if (typeof groupField.type === 'string') {
+            if (groupField.type === 'text') {
+              const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+              try {
+                groupResult[groupField.name] = readText(segment, pointerOffset);
+              } catch {
+                groupResult[groupField.name] = groupField.defaultValue ?? '';
+              }
+            } else if (groupField.type !== 'data') {
+              const offset = structOffset + getFieldOffset(groupField);
+              groupResult[groupField.name] = readPrimitive(segment, offset, groupField.type);
+            }
+          }
+        }
+        result[field.name] = groupResult;
       }
     }
   }

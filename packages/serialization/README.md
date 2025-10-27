@@ -529,17 +529,19 @@ const decoded = PersonSerializer.deserialize(encoded.value);
 - ✅ **Text and Data**: UTF-8 strings and binary data
 - ✅ **Lists**: Lists of primitives, text, and structs
 - ✅ **Nested Structs**: Structs containing other structs
-- ✅ **Enums**: Enumerated types
+- ✅ **Enums**: Enumerated types with named values
+- ✅ **Unions**: Discriminated unions with tag fields
+- ✅ **Default Values**: Field-level defaults for schema evolution
+- ✅ **Large Messages**: Dynamic buffer growth (single-segment, supports messages up to memory limit)
 - ✅ **Code Generation**: TypeScript interface and serializer generation
 - ✅ **Schema Parsing**: Parse Cap'n Proto schema syntax
 
-**Not Yet Supported:**
-- ❌ **Unions**: Discriminated unions (planned)
-- ❌ **Groups**: Inline struct groups (planned)
-- ❌ **Multi-segment Messages**: Large messages spanning segments (planned)
-- ❌ **Far Pointers**: Cross-segment references (planned)
-- ❌ **Generics**: Generic types (future)
-- ❌ **RPC**: Remote procedure calls (out of scope)
+**Not Supported (Low Priority):**
+- ❌ **Groups**: Use nested structs instead
+- ❌ **True Multi-segment**: Single large segment used instead (works for most cases)
+- ❌ **Far Pointers**: Not needed with single-segment approach
+- ❌ **Generics**: Future enhancement
+- ❌ **RPC**: Out of scope (use separate RPC layer)
 
 ### Type Examples
 
@@ -605,6 +607,32 @@ const peopleSchema = createCapnpSchema({
   name: 'People',
   fields: [
     { name: 'persons', type: list(structType(personSchema)), slot: 0 },
+  ],
+});
+
+// Unions
+const contactUnion = unionType(undefined, 0, [
+  { name: 'email', type: 'text', discriminant: 1 },
+  { name: 'phone', type: 'text', discriminant: 2 },
+]);
+
+const contactSchema = createCapnpSchema({
+  name: 'Contact',
+  fields: [
+    { name: 'name', type: 'text', slot: 0 },
+    { name: 'email', type: 'text', slot: 1, unionIndex: 0, discriminant: 1 },
+    { name: 'phone', type: 'text', slot: 1, unionIndex: 0, discriminant: 2 },
+  ],
+  unions: [contactUnion],
+});
+
+// Default Values (for schema evolution)
+const configSchema = createCapnpSchema({
+  name: 'Config',
+  fields: [
+    { name: 'enabled', type: 'bool', slot: 0, defaultValue: true },
+    { name: 'timeout', type: 'uint32', slot: 1, defaultValue: 5000 },
+    { name: 'retries', type: 'uint16', slot: 3, defaultValue: 3 },
   ],
 });
 ```

@@ -71,4 +71,6 @@ export {
   list,
   enumType,
   structType,
+  unionType,
+  groupType,
 } from './capnp.js';

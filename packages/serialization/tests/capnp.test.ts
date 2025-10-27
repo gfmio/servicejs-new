@@ -553,3 +553,207 @@ describe('Enum support', () => {
     }
   });
 });
+
+describe('Union support', () => {
+  it('should serialize and deserialize union with text fields', () => {
+    const { unionType, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const contactUnion = unionType(undefined, 0, [
+      { name: 'email', type: 'text', discriminant: 1 },
+      { name: 'phone', type: 'text', discriminant: 2 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Contact',
+      fields: [
+        { name: 'name', type: 'text', slot: 0 },
+        { name: 'email', type: 'text', slot: 1, unionIndex: 0, discriminant: 1 },
+        { name: 'phone', type: 'text', slot: 1, unionIndex: 0, discriminant: 2 },
+      ],
+      unions: [contactUnion],
+    });
+
+    const serializer = createCapnpSerializer<{
+      name: string;
+      email?: string;
+      phone?: string;
+    }>(schema);
+
+    // Test with email
+    const withEmail = {
+      name: 'Alice',
+      email: 'alice@example.com',
+    };
+
+    const encodedEmail = serializer.serialize(withEmail);
+    expect(isOk(encodedEmail)).toBe(true);
+    if (!isOk(encodedEmail)) return;
+
+    const decodedEmail = serializer.deserialize(encodedEmail.value);
+    expect(isOk(decodedEmail)).toBe(true);
+    if (isOk(decodedEmail)) {
+      expect(decodedEmail.value.name).toBe(withEmail.name);
+      expect(decodedEmail.value.email).toBe(withEmail.email);
+      expect(decodedEmail.value.phone).toBeUndefined();
+    }
+
+    // Test with phone
+    const withPhone = {
+      name: 'Bob',
+      phone: '+1-555-1234',
+    };
+
+    const encodedPhone = serializer.serialize(withPhone);
+    expect(isOk(encodedPhone)).toBe(true);
+    if (!isOk(encodedPhone)) return;
+
+    const decodedPhone = serializer.deserialize(encodedPhone.value);
+    expect(isOk(decodedPhone)).toBe(true);
+    if (isOk(decodedPhone)) {
+      expect(decodedPhone.value.name).toBe(withPhone.name);
+      expect(decodedPhone.value.phone).toBe(withPhone.phone);
+      expect(decodedPhone.value.email).toBeUndefined();
+    }
+  });
+
+  it('should serialize and deserialize union with different types', () => {
+    const { unionType, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const valueUnion = unionType(undefined, 0, [
+      { name: 'intValue', type: 'int32', discriminant: 1 },
+      { name: 'floatValue', type: 'float64', discriminant: 2 },
+      { name: 'textValue', type: 'text', discriminant: 3 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Value',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 1 },
+        { name: 'intValue', type: 'int32', slot: 2, unionIndex: 0, discriminant: 1 },
+        { name: 'floatValue', type: 'float64', slot: 2, unionIndex: 0, discriminant: 2 },
+        { name: 'textValue', type: 'text', slot: 0, unionIndex: 0, discriminant: 3 },
+      ],
+      unions: [valueUnion],
+    });
+
+    const serializer = createCapnpSerializer<{
+      id: number;
+      intValue?: number;
+      floatValue?: number;
+      textValue?: string;
+    }>(schema);
+
+    // Test with int
+    const withInt = { id: 1, intValue: 42 };
+    const encodedInt = serializer.serialize(withInt);
+    expect(isOk(encodedInt)).toBe(true);
+    if (isOk(encodedInt)) {
+      const decodedInt = serializer.deserialize(encodedInt.value);
+      expect(isOk(decodedInt)).toBe(true);
+      if (isOk(decodedInt)) {
+        expect(decodedInt.value.id).toBe(1);
+        expect(decodedInt.value.intValue).toBe(42);
+        expect(decodedInt.value.floatValue).toBeUndefined();
+        expect(decodedInt.value.textValue).toBeUndefined();
+      }
+    }
+
+    // Test with float
+    const withFloat = { id: 2, floatValue: 3.14 };
+    const encodedFloat = serializer.serialize(withFloat);
+    expect(isOk(encodedFloat)).toBe(true);
+    if (isOk(encodedFloat)) {
+      const decodedFloat = serializer.deserialize(encodedFloat.value);
+      expect(isOk(decodedFloat)).toBe(true);
+      if (isOk(decodedFloat)) {
+        expect(decodedFloat.value.id).toBe(2);
+        expect(decodedFloat.value.floatValue).toBeCloseTo(3.14);
+        expect(decodedFloat.value.intValue).toBeUndefined();
+        expect(decodedFloat.value.textValue).toBeUndefined();
+      }
+    }
+
+    // Test with text
+    const withText = { id: 3, textValue: 'hello' };
+    const encodedText = serializer.serialize(withText);
+    expect(isOk(encodedText)).toBe(true);
+    if (isOk(encodedText)) {
+      const decodedText = serializer.deserialize(encodedText.value);
+      expect(isOk(decodedText)).toBe(true);
+      if (isOk(decodedText)) {
+        expect(decodedText.value.id).toBe(3);
+        expect(decodedText.value.textValue).toBe('hello');
+        expect(decodedText.value.intValue).toBeUndefined();
+        expect(decodedText.value.floatValue).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe('Default values', () => {
+  it('should use default values for primitive fields', () => {
+    const { createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const schema = createCapnpSchema({
+      name: 'Config',
+      fields: [
+        { name: 'enabled', type: 'bool', slot: 0, defaultValue: true },
+        { name: 'timeout', type: 'uint32', slot: 1, defaultValue: 5000 },
+        { name: 'retries', type: 'uint16', slot: 3, defaultValue: 3 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{
+      enabled: boolean;
+      timeout: number;
+      retries: number;
+    }>(schema);
+
+    // Serialize with zero values (should use defaults on read)
+    const withZeros = {
+      enabled: false,
+      timeout: 0,
+      retries: 0,
+    };
+
+    const encoded = serializer.serialize(withZeros);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      // Zero values should be replaced with defaults
+      expect(decoded.value.enabled).toBe(true);
+      expect(decoded.value.timeout).toBe(5000);
+      expect(decoded.value.retries).toBe(3);
+    }
+  });
+
+  it('should preserve non-zero values despite defaults', () => {
+    const { createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const schema = createCapnpSchema({
+      name: 'Config',
+      fields: [
+        { name: 'timeout', type: 'uint32', slot: 0, defaultValue: 5000 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{ timeout: number }>(schema);
+
+    // Serialize with non-zero value
+    const original = { timeout: 10000 };
+
+    const encoded = serializer.serialize(original);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      // Non-zero value should be preserved
+      expect(decoded.value.timeout).toBe(10000);
+    }
+  });
+});
