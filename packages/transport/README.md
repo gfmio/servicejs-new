@@ -1119,3 +1119,49 @@ MIT
 ## Contributing
 
 See the main [ServiceJS repository](https://github.com/servicejs/servicejs) for contribution guidelines.
+
+## Connection Pooling
+
+For efficient management of multiple TCP connections, use the connection pool:
+
+```typescript
+import { createConnectionPool } from '@servicejs/transport';
+
+const pool = createConnectionPool({
+  baseUrn: 'urn:app:pool',
+  maxConnectionsPerHost: 10,
+  maxIdleTime: 60000, // 1 minute
+  acquireTimeout: 5000,
+});
+
+// Acquire a connection
+const transportResult = await pool.acquire('localhost', 8080);
+if (transportResult.success) {
+  const transport = transportResult.value;
+  
+  // Use the transport
+  await transport.send({
+    from: 'urn:app:client',
+    to: 'urn:server:api',
+    message: { type: 'request' },
+  });
+  
+  // Release back to pool for reuse
+  await pool.release(transport);
+}
+
+// Get pool statistics
+const stats = pool.getStats('localhost', 8080);
+console.log(`Total: ${stats.total}, Active: ${stats.active}, Idle: ${stats.idle}`);
+
+// Shutdown when done
+await pool.shutdown();
+```
+
+**Benefits:**
+- Connection reuse reduces overhead
+- Automatic connection limits prevent resource exhaustion
+- Idle connection cleanup
+- Wait queue for when pool is full
+- Per-host pooling
+

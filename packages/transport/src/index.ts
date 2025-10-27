@@ -36,6 +36,10 @@ export { createNetworkTransport } from './networkTransport.js';
 export type { TCPTransportConfig } from './tcpTransport.js';
 export { createTCPTransport } from './tcpTransport.js';
 
+// Connection pool
+export type { ConnectionPoolConfig, PoolStats } from './connectionPool.js';
+export { ConnectionPool, createConnectionPool } from './connectionPool.js';
+
 // Shared memory transport
 export type {
   RingBufferConfig,
