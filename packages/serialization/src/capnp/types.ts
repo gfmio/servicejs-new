@@ -1,11 +1,11 @@
 /**
  * Cap'n Proto Type Definitions
  *
- * Type definitions for Cap'n Proto schemas and serialization.
+ * Complete type definitions for Cap'n Proto schemas and serialization.
  */
 
 /**
- * Cap'n Proto primitive types
+ * Cap'n Proto primitive scalar types
  */
 export type CapnpPrimitiveType =
   | 'void'
@@ -24,19 +24,97 @@ export type CapnpPrimitiveType =
   | 'data';
 
 /**
+ * Cap'n Proto list type
+ */
+export interface CapnpListType {
+  kind: 'list';
+  /** Element type */
+  elementType: CapnpType;
+}
+
+/**
+ * Cap'n Proto enum type
+ */
+export interface CapnpEnumType {
+  kind: 'enum';
+  /** Enum name */
+  name: string;
+  /** Enum values */
+  enumerants: Array<{ name: string; value: number }>;
+}
+
+/**
+ * Cap'n Proto struct type
+ */
+export interface CapnpStructType {
+  kind: 'struct';
+  /** Struct schema */
+  schema: CapnpSchema;
+}
+
+/**
+ * Cap'n Proto union field
+ */
+export interface CapnpUnionField {
+  /** Field name */
+  name: string;
+  /** Field type */
+  type: CapnpType;
+  /** Discriminant value */
+  discriminant: number;
+}
+
+/**
+ * Cap'n Proto union type
+ */
+export interface CapnpUnionType {
+  kind: 'union';
+  /** Union name (optional, can be anonymous) */
+  name?: string;
+  /** Tag slot (which slot holds the discriminant) */
+  tagSlot: number;
+  /** Union fields */
+  fields: CapnpUnionField[];
+}
+
+/**
+ * Cap'n Proto group type (inline struct)
+ */
+export interface CapnpGroupType {
+  kind: 'group';
+  /** Group name */
+  name: string;
+  /** Group fields */
+  fields: CapnpField[];
+}
+
+/**
+ * Complete Cap'n Proto type
+ */
+export type CapnpType =
+  | CapnpPrimitiveType
+  | CapnpListType
+  | CapnpEnumType
+  | CapnpStructType
+  | CapnpUnionType
+  | CapnpGroupType;
+
+/**
  * Cap'n Proto field definition
  */
 export interface CapnpField {
   /** Field name */
   name: string;
   /** Field type */
-  type: CapnpPrimitiveType | 'struct';
+  type: CapnpType;
   /** Field slot/offset */
   slot: number;
   /** Default value */
   defaultValue?: any;
-  /** For struct types, the struct schema */
-  structSchema?: CapnpSchema;
+  /** Whether this field is part of a union */
+  unionIndex?: number;
+  /** Discriminant value (for union fields) */
+  discriminant?: number;
 }
 
 /**
@@ -47,10 +125,14 @@ export interface CapnpSchema {
   name: string;
   /** Fields in the struct */
   fields: CapnpField[];
+  /** Unions in the struct */
+  unions?: CapnpUnionType[];
   /** Data section size in words (8 bytes) */
   dataWordCount: number;
   /** Pointer section size in pointers */
   pointerCount: number;
+  /** Discriminant count (for unions) */
+  discriminantCount?: number;
 }
 
 /**

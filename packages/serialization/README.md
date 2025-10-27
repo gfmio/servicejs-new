@@ -522,20 +522,33 @@ const encoded = PersonSerializer.serialize(person);
 const decoded = PersonSerializer.deserialize(encoded.value);
 ```
 
-### Supported Types
+### Supported Features
+
+**Fully Supported:**
+- ✅ **Primitives**: void, bool, int8-64, uint8-64, float32/64
+- ✅ **Text and Data**: UTF-8 strings and binary data
+- ✅ **Lists**: Lists of primitives, text, and structs
+- ✅ **Nested Structs**: Structs containing other structs
+- ✅ **Enums**: Enumerated types
+- ✅ **Code Generation**: TypeScript interface and serializer generation
+- ✅ **Schema Parsing**: Parse Cap'n Proto schema syntax
+
+**Not Yet Supported:**
+- ❌ **Unions**: Discriminated unions (planned)
+- ❌ **Groups**: Inline struct groups (planned)
+- ❌ **Multi-segment Messages**: Large messages spanning segments (planned)
+- ❌ **Far Pointers**: Cross-segment references (planned)
+- ❌ **Generics**: Generic types (future)
+- ❌ **RPC**: Remote procedure calls (out of scope)
+
+### Type Examples
 
 ```typescript
-// Primitive types
-type CapnpPrimitiveType =
-  | 'void' | 'bool'
-  | 'int8' | 'int16' | 'int32' | 'int64'
-  | 'uint8' | 'uint16' | 'uint32' | 'uint64'
-  | 'float32' | 'float64'
-  | 'text' | 'data';
+import { createCapnpSchema, list, enumType, structType } from '@servicejs/serialization';
 
-// Example schema with various types
-const schema = createCapnpSchema({
-  name: 'AllTypes',
+// Primitives
+const primitiveSchema = createCapnpSchema({
+  name: 'Primitives',
   fields: [
     { name: 'flag', type: 'bool', slot: 0 },
     { name: 'count', type: 'uint32', slot: 1 },
@@ -544,23 +557,74 @@ const schema = createCapnpSchema({
     { name: 'data', type: 'data', slot: 1 },
   ],
 });
+
+// Lists
+const listSchema = createCapnpSchema({
+  name: 'Lists',
+  fields: [
+    { name: 'numbers', type: list('uint32'), slot: 0 },
+    { name: 'strings', type: list('text'), slot: 1 },
+    { name: 'flags', type: list('bool'), slot: 2 },
+  ],
+});
+
+// Enums
+const colorEnum = enumType('Color', [
+  { name: 'red', value: 0 },
+  { name: 'green', value: 1 },
+  { name: 'blue', value: 2 },
+]);
+
+const enumSchema = createCapnpSchema({
+  name: 'Thing',
+  fields: [
+    { name: 'id', type: 'uint32', slot: 0 },
+    { name: 'color', type: colorEnum, slot: 2 },
+  ],
+});
+
+// Nested Structs
+const addressSchema = createCapnpSchema({
+  name: 'Address',
+  fields: [
+    { name: 'street', type: 'text', slot: 0 },
+    { name: 'city', type: 'text', slot: 1 },
+  ],
+});
+
+const personSchema = createCapnpSchema({
+  name: 'Person',
+  fields: [
+    { name: 'name', type: 'text', slot: 0 },
+    { name: 'address', type: structType(addressSchema), slot: 1 },
+  ],
+});
+
+// List of Structs
+const peopleSchema = createCapnpSchema({
+  name: 'People',
+  fields: [
+    { name: 'persons', type: list(structType(personSchema)), slot: 0 },
+  ],
+});
 ```
 
 ### Pros and Cons
 
 **Pros:**
-- ✅ Zero-copy deserialization
-- ✅ Built-in schema support
+- ✅ Zero-copy deserialization (extremely fast reads)
+- ✅ Built-in schema support (no external compiler needed)
 - ✅ TypeScript code generation
 - ✅ Dynamic or static schemas
 - ✅ Compact binary format
-- ✅ Schema evolution support
-- ✅ No external compiler required
+- ✅ Lists, nested structs, and enums fully supported
+- ✅ Pure TypeScript implementation (works everywhere)
 
 **Cons:**
-- ❌ Most complex serializer
-- ❌ Not human-readable
-- ❌ Limited to Cap'n Proto primitives (simplified implementation)
+- ❌ Most complex serializer (steeper learning curve)
+- ❌ Not human-readable (binary format)
+- ❌ Some advanced features not yet implemented (unions, groups, multi-segment)
+- ❌ Manual slot management required (must avoid overlaps)
 
 ---
 
@@ -758,6 +822,7 @@ function createDynamicFlatBuffersSchema<T extends Record<string, any>>(
 ### Cap'n Proto
 
 ```typescript
+// Primitive types
 type CapnpPrimitiveType =
   | 'void' | 'bool'
   | 'int8' | 'int16' | 'int32' | 'int64'
@@ -765,36 +830,91 @@ type CapnpPrimitiveType =
   | 'float32' | 'float64'
   | 'text' | 'data';
 
-interface CapnpField {
-  name: string;
-  type: CapnpPrimitiveType | 'struct';
-  slot: number;
-  defaultValue?: any;
-  structSchema?: CapnpSchema;
+// List type
+interface CapnpListType {
+  kind: 'list';
+  elementType: CapnpType;
 }
 
+// Enum type
+interface CapnpEnumType {
+  kind: 'enum';
+  name: string;
+  enumerants: Array<{ name: string; value: number }>;
+}
+
+// Struct type
+interface CapnpStructType {
+  kind: 'struct';
+  schema: CapnpSchema;
+}
+
+// Union type
+interface CapnpUnionType {
+  kind: 'union';
+  name?: string;
+  tagSlot: number;
+  fields: Array<{
+    name: string;
+    type: CapnpType;
+    discriminant: number;
+  }>;
+}
+
+// Complete type system
+type CapnpType =
+  | CapnpPrimitiveType
+  | CapnpListType
+  | CapnpEnumType
+  | CapnpStructType
+  | CapnpUnionType;
+
+// Field definition
+interface CapnpField {
+  name: string;
+  type: CapnpType;
+  slot: number;
+  defaultValue?: any;
+}
+
+// Schema definition
 interface CapnpSchema {
   name: string;
   fields: CapnpField[];
+  unions?: CapnpUnionType[];
   dataWordCount: number;
   pointerCount: number;
+  discriminantCount?: number;
 }
 
+// Schema creation
 function createCapnpSchema(config: {
   name: string;
   fields: Array<{
     name: string;
-    type: CapnpField['type'];
+    type: CapnpType;
     slot: number;
     defaultValue?: any;
-    structSchema?: CapnpSchema;
   }>;
+  unions?: CapnpUnionType[];
 }): CapnpSchema;
 
+// Helper functions
+function list(elementType: CapnpType): CapnpListType;
+
+function enumType(
+  name: string,
+  enumerants: Array<{ name: string; value: number }>
+): CapnpEnumType;
+
+function structType(schema: CapnpSchema): CapnpStructType;
+
+// Serializer creation
 function createCapnpSerializer<T extends Record<string, any>>(
   schema: CapnpSchema
 ): Serializer<T>;
 
+// Schema utilities
 function parseCapnpSchema(schemaText: string): CapnpSchema;
 
 function generateTypeScriptCode(schema: CapnpSchema): string;

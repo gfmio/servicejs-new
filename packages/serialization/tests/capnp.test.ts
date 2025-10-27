@@ -330,3 +330,226 @@ describe('Message-passing scenario', () => {
     }
   });
 });
+
+describe('List support', () => {
+  it('should serialize and deserialize list of numbers', () => {
+    const { list, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const schema = createCapnpSchema({
+      name: 'NumberList',
+      fields: [
+        { name: 'values', type: list('uint32'), slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{ values: number[] }>(schema);
+
+    const original = { values: [1, 2, 3, 4, 5] };
+    const encoded = serializer.serialize(original);
+
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.values).toEqual(original.values);
+    }
+  });
+
+  it('should serialize and deserialize list of strings', () => {
+    const { list, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const schema = createCapnpSchema({
+      name: 'StringList',
+      fields: [
+        { name: 'tags', type: list('text'), slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{ tags: string[] }>(schema);
+
+    const original = { tags: ['hello', 'world', 'test'] };
+    const encoded = serializer.serialize(original);
+
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.tags).toEqual(original.tags);
+    }
+  });
+
+  it('should serialize and deserialize list of booleans', () => {
+    const { list, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const schema = createCapnpSchema({
+      name: 'BoolList',
+      fields: [
+        { name: 'flags', type: list('bool'), slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{ flags: boolean[] }>(schema);
+
+    const original = { flags: [true, false, true, true, false] };
+    const encoded = serializer.serialize(original);
+
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.flags).toEqual(original.flags);
+    }
+  });
+
+  it('should serialize and deserialize list of structs', () => {
+    const { list, structType, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const personSchema = createCapnpSchema({
+      name: 'Person',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 0 },
+        { name: 'name', type: 'text', slot: 0 },
+      ],
+    });
+
+    const schema = createCapnpSchema({
+      name: 'People',
+      fields: [
+        { name: 'persons', type: list(structType(personSchema)), slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{
+      persons: Array<{ id: number; name: string }>;
+    }>(schema);
+
+    const original = {
+      persons: [
+        { id: 1, name: 'Alice' },
+        { id: 2, name: 'Bob' },
+        { id: 3, name: 'Charlie' },
+      ],
+    };
+
+    const encoded = serializer.serialize(original);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.persons.length).toBe(3);
+      expect(decoded.value.persons[0].id).toBe(1);
+      expect(decoded.value.persons[0].name).toBe('Alice');
+      expect(decoded.value.persons[1].id).toBe(2);
+      expect(decoded.value.persons[1].name).toBe('Bob');
+      expect(decoded.value.persons[2].id).toBe(3);
+      expect(decoded.value.persons[2].name).toBe('Charlie');
+    }
+  });
+});
+
+describe('Nested struct support', () => {
+  it('should serialize and deserialize nested structs', () => {
+    const { structType, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const addressSchema = createCapnpSchema({
+      name: 'Address',
+      fields: [
+        { name: 'street', type: 'text', slot: 0 },
+        { name: 'city', type: 'text', slot: 1 },
+        { name: 'zipCode', type: 'uint32', slot: 0 },
+      ],
+    });
+
+    const personSchema = createCapnpSchema({
+      name: 'Person',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 0 },
+        { name: 'name', type: 'text', slot: 0 },
+        { name: 'address', type: structType(addressSchema), slot: 1 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{
+      id: number;
+      name: string;
+      address: {
+        street: string;
+        city: string;
+        zipCode: number;
+      };
+    }>(personSchema);
+
+    const original = {
+      id: 123,
+      name: 'Alice',
+      address: {
+        street: '123 Main St',
+        city: 'Springfield',
+        zipCode: 12345,
+      },
+    };
+
+    const encoded = serializer.serialize(original);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.id).toBe(original.id);
+      expect(decoded.value.name).toBe(original.name);
+      expect(decoded.value.address.street).toBe(original.address.street);
+      expect(decoded.value.address.city).toBe(original.address.city);
+      expect(decoded.value.address.zipCode).toBe(original.address.zipCode);
+    }
+  });
+});
+
+describe('Enum support', () => {
+  it('should serialize and deserialize enums', () => {
+    const { enumType, createCapnpSchema, createCapnpSerializer } = require('../src/capnp.js');
+
+    const colorEnum = enumType('Color', [
+      { name: 'red', value: 0 },
+      { name: 'green', value: 1 },
+      { name: 'blue', value: 2 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Thing',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 0 },
+        { name: 'color', type: colorEnum, slot: 2 }, // Slot 2 for uint16 to avoid overlap
+      ],
+    });
+
+    const serializer = createCapnpSerializer<{
+      id: number;
+      color: string;
+    }>(schema);
+
+    const original = {
+      id: 42,
+      color: 'blue',
+    };
+
+    const encoded = serializer.serialize(original);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.id).toBe(original.id);
+      expect(decoded.value.color).toBe(original.color);
+    }
+  });
+});

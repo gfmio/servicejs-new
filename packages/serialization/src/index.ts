@@ -54,10 +54,21 @@ export {
 } from './flatbuffers.js';
 
 // Cap'n Proto serializer
-export type { CapnpSchema, CapnpField } from './capnp.js';
+export type {
+  CapnpSchema,
+  CapnpField,
+  CapnpType,
+  CapnpListType,
+  CapnpStructType,
+  CapnpEnumType,
+  CapnpUnionType,
+} from './capnp.js';
 export {
   createCapnpSchema,
   createCapnpSerializer,
   generateTypeScriptCode,
   parseCapnpSchema,
+  list,
+  enumType,
+  structType,
 } from './capnp.js';

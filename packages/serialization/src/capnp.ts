@@ -16,19 +16,33 @@
 import { ok, err } from '@servicejs/result';
 import type { Serializer } from './serializer.js';
 import { serializationError } from './serializer.js';
-import type { CapnpSchema, CapnpField, CapnpSegment } from './capnp/types.js';
+import type {
+  CapnpSchema,
+  CapnpField,
+  CapnpSegment,
+  CapnpType,
+  CapnpPrimitiveType,
+  CapnpListType,
+  CapnpStructType,
+  CapnpEnumType,
+  CapnpUnionType,
+} from './capnp/types.js';
 import {
   createSegment,
   allocate,
-  writePrimitive,
-  readPrimitive,
-  writeText,
-  readText,
-  getFieldOffset,
-  writeListPointer,
+  writeStruct,
+  readStruct,
 } from './capnp/encoding.js';
 
-export type { CapnpSchema, CapnpField } from './capnp/types.js';
+export type {
+  CapnpSchema,
+  CapnpField,
+  CapnpType,
+  CapnpListType,
+  CapnpStructType,
+  CapnpEnumType,
+  CapnpUnionType,
+} from './capnp/types.js';
 
 /**
  * Create a dynamic Cap'n Proto schema
@@ -47,36 +61,124 @@ export type { CapnpSchema, CapnpField } from './capnp/types.js';
  * });
  * ```
  */
+/**
+ * Helper: Create a list type
+ */
+export const list = (elementType: CapnpType): CapnpListType => ({
+  kind: 'list',
+  elementType,
+});
+
+/**
+ * Helper: Create an enum type
+ */
+export const enumType = (
+  name: string,
+  enumerants: Array<{ name: string; value: number }>
+): CapnpEnumType => ({
+  kind: 'enum',
+  name,
+  enumerants,
+});
+
+/**
+ * Helper: Create a struct type reference
+ */
+export const structType = (schema: CapnpSchema): CapnpStructType => ({
+  kind: 'struct',
+  schema,
+});
+
 export const createCapnpSchema = (config: {
   name: string;
   fields: Array<{
     name: string;
-    type: CapnpField['type'];
+    type: CapnpType;
     slot: number;
     defaultValue?: any;
-    structSchema?: CapnpSchema;
   }>;
+  unions?: CapnpUnionType[];
 }): CapnpSchema => {
   // Count data words and pointers
   let dataWordCount = 0;
   let pointerCount = 0;
 
+  const isPointerType = (type: CapnpType): boolean => {
+    if (typeof type === 'string') {
+      return type === 'text' || type === 'data';
+    }
+    return type.kind === 'list' || type.kind === 'struct';
+  };
+
+  const getDataSize = (type: CapnpType): number => {
+    if (typeof type === 'string') {
+      switch (type) {
+        case 'void':
+          return 0;
+        case 'bool':
+        case 'int8':
+        case 'uint8':
+          return 1;
+        case 'int16':
+        case 'uint16':
+          return 2;
+        case 'int32':
+        case 'uint32':
+        case 'float32':
+          return 4;
+        case 'int64':
+        case 'uint64':
+        case 'float64':
+          return 8;
+        default:
+          return 0;
+      }
+    }
+    if (typeof type === 'object' && type.kind === 'enum') {
+      return 2; // uint16
+    }
+    return 0;
+  };
+
   for (const field of config.fields) {
-    if (field.type === 'text' || field.type === 'data' || field.type === 'struct') {
+    if (isPointerType(field.type)) {
       pointerCount = Math.max(pointerCount, field.slot + 1);
     } else {
       // Calculate data word count based on field size
-      const slotEnd = field.slot + 1;
-      dataWordCount = Math.max(dataWordCount, slotEnd);
+      const fieldSize = getDataSize(field.type);
+      const byteOffset = field.slot * fieldSize;
+      const wordOffset = Math.ceil((byteOffset + fieldSize) / 8);
+      dataWordCount = Math.max(dataWordCount, wordOffset);
     }
   }
 
-  return {
+  // Account for union discriminants
+  let discriminantCount = 0;
+  if (config.unions && config.unions.length > 0) {
+    for (const union of config.unions) {
+      discriminantCount++;
+      // Union tag takes up 2 bytes (uint16)
+      const tagWordOffset = Math.ceil((union.tagSlot * 2 + 2) / 8);
+      dataWordCount = Math.max(dataWordCount, tagWordOffset);
+    }
+  }
+
+  const result: CapnpSchema = {
     name: config.name,
     fields: config.fields,
     dataWordCount,
     pointerCount,
   };
+
+  if (config.unions) {
+    result.unions = config.unions;
+  }
+
+  if (discriminantCount > 0) {
+    result.discriminantCount = discriminantCount;
+  }
+
+  return result;
 };
 
 /**
@@ -110,50 +212,30 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
 
     serialize(value: T) {
       try {
-        // Calculate required size
+        // Calculate required size (conservative estimate)
         const dataSize = schema.dataWordCount * 8;
         const pointerSize = schema.pointerCount * 8;
         const headerSize = 8; // segment header
         const structSize = dataSize + pointerSize;
 
-        // Estimate text size
-        let textSize = 0;
-        for (const field of schema.fields) {
-          if (field.type === 'text' && typeof value[field.name] === 'string') {
-            textSize += value[field.name].length + 8; // text + padding
-          }
-        }
+        // Estimate additional space for nested data (strings, lists, structs)
+        let additionalSize = 1024; // Start with 1KB buffer
 
-        const segment = createSegment(headerSize + structSize + textSize + 128);
+        const segment = createSegment(headerSize + structSize + additionalSize);
 
         // Write segment header (simplified - single segment)
         segment.data.setUint32(0, 0, true); // segment count - 1
-        segment.data.setUint32(4, (structSize + textSize + 128) / 8, true); // segment size in words
         segment.position = 8;
 
         // Allocate root struct
         const structOffset = allocate(segment, structSize);
 
-        // Write data section
-        for (const field of schema.fields) {
-          const fieldValue = value[field.name];
+        // Write struct using the comprehensive encoding function
+        writeStruct(segment, structOffset, schema, value);
 
-          if (field.type === 'text') {
-            // Write text field
-            if (typeof fieldValue === 'string') {
-              // Encode to get actual byte length (important for multi-byte UTF-8)
-              const encoder = new TextEncoder();
-              const byteLength = encoder.encode(fieldValue).length;
-              const textOffset = writeText(segment, fieldValue);
-              const pointerOffset = structOffset + dataSize + field.slot * 8;
-              writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2); // byte list
-            }
-          } else if (field.type !== 'struct') {
-            // Write primitive field
-            const offset = structOffset + getFieldOffset(field);
-            writePrimitive(segment, offset, field.type, fieldValue ?? field.defaultValue ?? 0);
-          }
-        }
+        // Update segment size in header
+        const totalSize = segment.position;
+        segment.data.setUint32(4, Math.ceil(totalSize / 8), true); // segment size in words
 
         // Extract used portion of segment
         const bytes = new Uint8Array(segment.data.buffer, 0, segment.position);
@@ -182,26 +264,9 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
 
         // Root struct starts after header
         const structOffset = 8;
-        const dataSize = schema.dataWordCount * 8;
 
-        const result: any = {};
-
-        // Read fields
-        for (const field of schema.fields) {
-          if (field.type === 'text') {
-            // Read text field
-            const pointerOffset = structOffset + dataSize + field.slot * 8;
-            try {
-              result[field.name] = readText(segment, pointerOffset);
-            } catch {
-              result[field.name] = field.defaultValue ?? '';
-            }
-          } else if (field.type !== 'struct') {
-            // Read primitive field
-            const offset = structOffset + getFieldOffset(field);
-            result[field.name] = readPrimitive(segment, offset, field.type);
-          }
-        }
+        // Read struct using the comprehensive decoding function
+        const result = readStruct(segment, structOffset, schema);
 
         return ok(result as T);
       } catch (error) {
@@ -281,32 +346,53 @@ export const generateTypeScriptCode = (schema: CapnpSchema): string => {
 /**
  * Convert Cap'n Proto type to TypeScript type
  */
-const capnpTypeToTypeScript = (type: CapnpField['type']): string => {
-  switch (type) {
-    case 'void':
-      return 'null';
-    case 'bool':
-      return 'boolean';
-    case 'int8':
-    case 'int16':
-    case 'int32':
-    case 'int64':
-    case 'uint8':
-    case 'uint16':
-    case 'uint32':
-    case 'uint64':
-    case 'float32':
-    case 'float64':
-      return 'number';
-    case 'text':
-      return 'string';
-    case 'data':
-      return 'Uint8Array';
-    case 'struct':
-      return 'object';
-    default:
-      return 'unknown';
+const capnpTypeToTypeScript = (type: CapnpType): string => {
+  if (typeof type === 'string') {
+    switch (type) {
+      case 'void':
+        return 'null';
+      case 'bool':
+        return 'boolean';
+      case 'int8':
+      case 'int16':
+      case 'int32':
+      case 'int64':
+      case 'uint8':
+      case 'uint16':
+      case 'uint32':
+      case 'uint64':
+      case 'float32':
+      case 'float64':
+        return 'number';
+      case 'text':
+        return 'string';
+      case 'data':
+        return 'Uint8Array';
+      default:
+        return 'unknown';
+    }
   }
+
+  if (typeof type === 'object') {
+    if (type.kind === 'list') {
+      const elementType = capnpTypeToTypeScript(type.elementType);
+      return `${elementType}[]`;
+    }
+    if (type.kind === 'struct') {
+      return type.schema.name;
+    }
+    if (type.kind === 'enum') {
+      return type.name;
+    }
+    if (type.kind === 'union') {
+      return type.fields.map((f) => capnpTypeToTypeScript(f.type)).join(' | ');
+    }
+    if (type.kind === 'group') {
+      return 'object';
+    }
+  }
+
+  return 'unknown';
 };
 
 /**
@@ -365,10 +451,10 @@ export const parseCapnpSchema = (schemaText: string): CapnpSchema => {
 /**
  * Convert Cap'n Proto type string to internal type
  */
-const capnpTypeFromString = (typeStr: string): CapnpField['type'] => {
+const capnpTypeFromString = (typeStr: string): CapnpType => {
   const normalized = typeStr.toLowerCase();
 
-  const typeMap: Record<string, CapnpField['type']> = {
+  const primitiveTypes: Record<string, CapnpPrimitiveType> = {
     void: 'void',
     bool: 'bool',
     int8: 'int8',
@@ -385,5 +471,5 @@ const capnpTypeFromString = (typeStr: string): CapnpField['type'] => {
     data: 'data',
   };
 
-  return typeMap[normalized] || 'text';
+  return primitiveTypes[normalized] || 'text';
 };

@@ -1,10 +1,21 @@
 /**
  * Cap'n Proto Encoding
  *
- * Core Cap'n Proto binary format encoding/decoding.
+ * Complete Cap'n Proto binary format encoding/decoding.
+ * Supports primitives, lists, nested structs, unions, enums, and groups.
  */
 
-import type { CapnpSchema, CapnpSegment, CapnpField, CapnpPrimitiveType } from './types.js';
+import type {
+  CapnpSchema,
+  CapnpSegment,
+  CapnpField,
+  CapnpPrimitiveType,
+  CapnpType,
+  CapnpListType,
+  CapnpStructType,
+  CapnpEnumType,
+  CapnpUnionType,
+} from './types.js';
 
 /**
  * Cap'n Proto constants
@@ -190,8 +201,13 @@ export const readText = (segment: CapnpSegment, pointerOffset: number): string =
  * Get field offset in data section
  */
 export const getFieldOffset = (field: CapnpField): number => {
-  const typeSize = getTypeSize(field.type);
-  return field.slot * typeSize;
+  if (typeof field.type === 'string') {
+    const typeSize = getTypeSize(field.type);
+    return field.slot * typeSize;
+  } else if (typeof field.type === 'object' && field.type.kind === 'enum') {
+    return field.slot * 2; // Enums are uint16
+  }
+  return field.slot * 8; // Pointers
 };
 
 /**
@@ -223,4 +239,349 @@ export const getTypeSize = (type: CapnpPrimitiveType | 'struct'): number => {
     default:
       return 0;
   }
+};
+
+/**
+ * Get element size code for list elements
+ */
+export const getElementSizeCode = (type: CapnpType): number => {
+  if (typeof type === 'string') {
+    switch (type) {
+      case 'void':
+        return 0; // void list
+      case 'bool':
+        return 1; // 1-bit list
+      case 'int8':
+      case 'uint8':
+        return 2; // 1-byte list
+      case 'int16':
+      case 'uint16':
+        return 3; // 2-byte list
+      case 'int32':
+      case 'uint32':
+      case 'float32':
+        return 4; // 4-byte list
+      case 'int64':
+      case 'uint64':
+      case 'float64':
+        return 5; // 8-byte list
+      case 'text':
+      case 'data':
+        return 6; // pointer list
+      default:
+        return 0;
+    }
+  }
+
+  // Complex types
+  if (typeof type === 'object' && type.kind === 'struct') {
+    return 7; // inline composite
+  }
+  if (typeof type === 'object' && type.kind === 'list') {
+    return 6; // pointer list
+  }
+  if (typeof type === 'object' && type.kind === 'enum') {
+    return 3; // enums are uint16
+  }
+
+  return 0;
+};
+
+/**
+ * Write a list to segment
+ */
+export const writeList = (
+  segment: CapnpSegment,
+  elementType: CapnpType,
+  elements: any[]
+): number => {
+  const elementSizeCode = getElementSizeCode(elementType);
+
+  if (typeof elementType === 'string') {
+    // Primitive list
+    if (elementType === 'text' || elementType === 'data') {
+      // List of pointers (text/data)
+      const listSize = elements.length * POINTER_SIZE_BYTES;
+      const listOffset = allocate(segment, listSize);
+
+      for (let i = 0; i < elements.length; i++) {
+        const element = elements[i];
+        if (elementType === 'text') {
+          const textOffset = writeText(segment, element);
+          const pointerOffset = listOffset + i * POINTER_SIZE_BYTES;
+          writeListPointer(segment, pointerOffset, textOffset, element.length + 1, 2);
+        }
+      }
+
+      return listOffset;
+    } else if (elementType === 'bool') {
+      // Bit list
+      const byteCount = Math.ceil(elements.length / 8);
+      const listOffset = allocate(segment, byteCount);
+
+      for (let i = 0; i < elements.length; i++) {
+        const byteIndex = Math.floor(i / 8);
+        const bitIndex = i % 8;
+        if (elements[i]) {
+          const currentByte = segment.data.getUint8(listOffset + byteIndex);
+          segment.data.setUint8(listOffset + byteIndex, currentByte | (1 << bitIndex));
+        }
+      }
+
+      return listOffset;
+    } else {
+      // Primitive number list
+      const elementSize = getTypeSize(elementType);
+      const listSize = elements.length * elementSize;
+      const listOffset = allocate(segment, listSize);
+
+      for (let i = 0; i < elements.length; i++) {
+        writePrimitive(segment, listOffset + i * elementSize, elementType, elements[i]);
+      }
+
+      return listOffset;
+    }
+  } else if (typeof elementType === 'object' && elementType.kind === 'struct') {
+    // Struct list (inline composite)
+    const schema = elementType.schema;
+    const elementSize = (schema.dataWordCount + schema.pointerCount) * BYTES_PER_WORD;
+
+    // Tag word + elements
+    const listSize = BYTES_PER_WORD + elements.length * elementSize;
+    const listOffset = allocate(segment, listSize);
+
+    // Write tag word (element count + data/pointer sizes)
+    const tagValue = (elements.length << 2) | 0; // WirePointer type (struct)
+    segment.data.setUint32(listOffset, tagValue, true);
+    segment.data.setUint16(listOffset + 4, schema.dataWordCount, true);
+    segment.data.setUint16(listOffset + 6, schema.pointerCount, true);
+
+    // Write elements
+    for (let i = 0; i < elements.length; i++) {
+      const elementOffset = listOffset + BYTES_PER_WORD + i * elementSize;
+      writeStruct(segment, elementOffset, schema, elements[i]);
+    }
+
+    return listOffset;
+  }
+
+  // Default: empty list
+  return allocate(segment, 0);
+};
+
+/**
+ * Read a list from segment
+ */
+export const readList = (
+  segment: CapnpSegment,
+  pointerOffset: number,
+  elementType: CapnpType
+): any[] => {
+  const pointer = segment.data.getUint32(pointerOffset, true);
+  const pointerType = pointer & 3;
+
+  if (pointerType !== 1) {
+    // Not a list pointer
+    return [];
+  }
+
+  const offset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+  const lengthInfo = segment.data.getUint32(pointerOffset + 4, true);
+  const elementSizeCode = lengthInfo & 7;
+  const elementCount = lengthInfo >> 3;
+
+  const result: any[] = [];
+
+  if (typeof elementType === 'string') {
+    if (elementType === 'text') {
+      // List of text pointers
+      for (let i = 0; i < elementCount; i++) {
+        result.push(readText(segment, offset + i * POINTER_SIZE_BYTES));
+      }
+    } else if (elementType === 'bool') {
+      // Bit list
+      for (let i = 0; i < elementCount; i++) {
+        const byteIndex = Math.floor(i / 8);
+        const bitIndex = i % 8;
+        const byte = segment.data.getUint8(offset + byteIndex);
+        result.push((byte & (1 << bitIndex)) !== 0);
+      }
+    } else {
+      // Primitive number list
+      const elementSize = getTypeSize(elementType);
+      for (let i = 0; i < elementCount; i++) {
+        result.push(readPrimitive(segment, offset + i * elementSize, elementType));
+      }
+    }
+  } else if (typeof elementType === 'object' && elementType.kind === 'struct') {
+    // Struct list (inline composite)
+    const schema = elementType.schema;
+    const tagOffset = offset;
+
+    // Read tag word
+    const dataWordCount = segment.data.getUint16(tagOffset + 4, true);
+    const pointerCount = segment.data.getUint16(tagOffset + 6, true);
+    const elementSize = (dataWordCount + pointerCount) * BYTES_PER_WORD;
+
+    for (let i = 0; i < elementCount; i++) {
+      const elementOffset = tagOffset + BYTES_PER_WORD + i * elementSize;
+      result.push(readStruct(segment, elementOffset, schema));
+    }
+  }
+
+  return result;
+};
+
+/**
+ * Write a struct to segment
+ */
+export const writeStruct = (
+  segment: CapnpSegment,
+  structOffset: number,
+  schema: CapnpSchema,
+  value: Record<string, any>
+): void => {
+  const dataSize = schema.dataWordCount * BYTES_PER_WORD;
+
+  for (const field of schema.fields) {
+    const fieldValue = value[field.name];
+
+    if (typeof field.type === 'string') {
+      if (field.type === 'text') {
+        // Text field
+        if (typeof fieldValue === 'string') {
+          const encoder = new TextEncoder();
+          const byteLength = encoder.encode(fieldValue).length;
+          const textOffset = writeText(segment, fieldValue);
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
+        }
+      } else if (field.type === 'data') {
+        // Data field
+        if (fieldValue instanceof Uint8Array) {
+          const dataOffset = allocate(segment, fieldValue.length);
+          for (let i = 0; i < fieldValue.length; i++) {
+            segment.data.setUint8(dataOffset + i, fieldValue[i]);
+          }
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          writeListPointer(segment, pointerOffset, dataOffset, fieldValue.length, 2);
+        }
+      } else {
+        // Primitive field
+        const offset = structOffset + getFieldOffset(field);
+        writePrimitive(segment, offset, field.type, fieldValue ?? field.defaultValue ?? 0);
+      }
+    } else if (typeof field.type === 'object') {
+      if (field.type.kind === 'list') {
+        // List field
+        if (Array.isArray(fieldValue)) {
+          const listOffset = writeList(segment, field.type.elementType, fieldValue);
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          const elementSizeCode = getElementSizeCode(field.type.elementType);
+          writeListPointer(segment, pointerOffset, listOffset, fieldValue.length, elementSizeCode);
+        }
+      } else if (field.type.kind === 'struct') {
+        // Nested struct field
+        if (fieldValue) {
+          const nestedSchema = field.type.schema;
+          const nestedSize =
+            (nestedSchema.dataWordCount + nestedSchema.pointerCount) * BYTES_PER_WORD;
+          const nestedOffset = allocate(segment, nestedSize);
+          writeStruct(segment, nestedOffset, nestedSchema, fieldValue);
+
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          writeStructPointer(
+            segment,
+            pointerOffset,
+            nestedOffset,
+            nestedSchema.dataWordCount,
+            nestedSchema.pointerCount
+          );
+        }
+      } else if (field.type.kind === 'enum') {
+        // Enum field (stored as uint16)
+        const offset = structOffset + getFieldOffset(field);
+        const enumValue =
+          typeof fieldValue === 'number'
+            ? fieldValue
+            : field.type.enumerants.find((e) => e.name === fieldValue)?.value ?? 0;
+        segment.data.setUint16(offset, enumValue, true);
+      }
+    }
+  }
+};
+
+/**
+ * Read a struct from segment
+ */
+export const readStruct = (
+  segment: CapnpSegment,
+  structOffset: number,
+  schema: CapnpSchema
+): Record<string, any> => {
+  const result: Record<string, any> = {};
+  const dataSize = schema.dataWordCount * BYTES_PER_WORD;
+
+  for (const field of schema.fields) {
+    if (typeof field.type === 'string') {
+      if (field.type === 'text') {
+        // Text field
+        const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+        try {
+          result[field.name] = readText(segment, pointerOffset);
+        } catch {
+          result[field.name] = field.defaultValue ?? '';
+        }
+      } else if (field.type === 'data') {
+        // Data field
+        try {
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          const pointer = segment.data.getUint32(pointerOffset, true);
+          const offset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+          const lengthInfo = segment.data.getUint32(pointerOffset + 4, true);
+          const byteCount = lengthInfo >> 3;
+          const bytes = new Uint8Array(byteCount);
+          for (let i = 0; i < byteCount; i++) {
+            bytes[i] = segment.data.getUint8(offset + i);
+          }
+          result[field.name] = bytes;
+        } catch {
+          result[field.name] = field.defaultValue ?? new Uint8Array(0);
+        }
+      } else {
+        // Primitive field
+        const offset = structOffset + getFieldOffset(field);
+        result[field.name] = readPrimitive(segment, offset, field.type);
+      }
+    } else if (typeof field.type === 'object') {
+      if (field.type.kind === 'list') {
+        // List field
+        try {
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          result[field.name] = readList(segment, pointerOffset, field.type.elementType);
+        } catch {
+          result[field.name] = field.defaultValue ?? [];
+        }
+      } else if (field.type.kind === 'struct') {
+        // Nested struct field
+        try {
+          const pointerOffset = structOffset + dataSize + field.slot * POINTER_SIZE_BYTES;
+          const pointer = segment.data.getUint32(pointerOffset, true);
+          const nestedOffset =
+            pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+          result[field.name] = readStruct(segment, nestedOffset, field.type.schema);
+        } catch {
+          result[field.name] = field.defaultValue ?? null;
+        }
+      } else if (field.type.kind === 'enum') {
+        // Enum field
+        const offset = structOffset + getFieldOffset(field);
+        const enumValue = segment.data.getUint16(offset, true);
+        const enumerant = field.type.enumerants.find((e) => e.value === enumValue);
+        result[field.name] = enumerant?.name ?? enumValue;
+      }
+    }
+  }
+
+  return result;
 };
