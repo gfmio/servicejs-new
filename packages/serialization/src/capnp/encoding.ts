@@ -439,28 +439,43 @@ export const writeList = (
 
       return listOffset;
     }
-  } else if (typeof elementType === 'object' && elementType.kind === 'struct') {
-    // Struct list (inline composite)
-    const schema = elementType.schema;
-    const elementSize = (schema.dataWordCount + schema.pointerCount) * BYTES_PER_WORD;
+  } else if (typeof elementType === 'object') {
+    if (elementType.kind === 'struct') {
+      // Struct list (inline composite)
+      const schema = elementType.schema;
+      const elementSize = (schema.dataWordCount + schema.pointerCount) * BYTES_PER_WORD;
 
-    // Tag word + elements
-    const listSize = BYTES_PER_WORD + elements.length * elementSize;
-    const listOffset = allocate(segment, listSize);
+      // Tag word + elements
+      const listSize = BYTES_PER_WORD + elements.length * elementSize;
+      const listOffset = allocate(segment, listSize);
 
-    // Write tag word (element count + data/pointer sizes)
-    const tagValue = (elements.length << 2) | 0; // WirePointer type (struct)
-    segment.data.setUint32(listOffset, tagValue, true);
-    segment.data.setUint16(listOffset + 4, schema.dataWordCount, true);
-    segment.data.setUint16(listOffset + 6, schema.pointerCount, true);
+      // Write tag word (element count + data/pointer sizes)
+      const tagValue = (elements.length << 2) | 0; // WirePointer type (struct)
+      segment.data.setUint32(listOffset, tagValue, true);
+      segment.data.setUint16(listOffset + 4, schema.dataWordCount, true);
+      segment.data.setUint16(listOffset + 6, schema.pointerCount, true);
 
-    // Write elements
-    for (let i = 0; i < elements.length; i++) {
-      const elementOffset = listOffset + BYTES_PER_WORD + i * elementSize;
-      writeStruct(segment, elementOffset, schema, elements[i]);
+      // Write elements
+      for (let i = 0; i < elements.length; i++) {
+        const elementOffset = listOffset + BYTES_PER_WORD + i * elementSize;
+        writeStruct(segment, elementOffset, schema, elements[i]);
+      }
+
+      return listOffset;
+    } else if (elementType.kind === 'list') {
+      // List of lists (pointer list)
+      const listSize = elements.length * POINTER_SIZE_BYTES;
+      const listOffset = allocate(segment, listSize);
+
+      for (let i = 0; i < elements.length; i++) {
+        const nestedListOffset = writeList(segment, elementType.elementType, elements[i]);
+        const pointerOffset = listOffset + i * POINTER_SIZE_BYTES;
+        const nestedElementSizeCode = getElementSizeCode(elementType.elementType);
+        writeListPointer(segment, pointerOffset, nestedListOffset, elements[i].length, nestedElementSizeCode);
+      }
+
+      return listOffset;
     }
-
-    return listOffset;
   }
 
   // Default: empty list
@@ -511,19 +526,27 @@ export const readList = (
         result.push(readPrimitive(segment, offset + i * elementSize, elementType));
       }
     }
-  } else if (typeof elementType === 'object' && elementType.kind === 'struct') {
-    // Struct list (inline composite)
-    const schema = elementType.schema;
-    const tagOffset = offset;
+  } else if (typeof elementType === 'object') {
+    if (elementType.kind === 'struct') {
+      // Struct list (inline composite)
+      const schema = elementType.schema;
+      const tagOffset = offset;
 
-    // Read tag word
-    const dataWordCount = segment.data.getUint16(tagOffset + 4, true);
-    const pointerCount = segment.data.getUint16(tagOffset + 6, true);
-    const elementSize = (dataWordCount + pointerCount) * BYTES_PER_WORD;
+      // Read tag word
+      const dataWordCount = segment.data.getUint16(tagOffset + 4, true);
+      const pointerCount = segment.data.getUint16(tagOffset + 6, true);
+      const elementSize = (dataWordCount + pointerCount) * BYTES_PER_WORD;
 
-    for (let i = 0; i < elementCount; i++) {
-      const elementOffset = tagOffset + BYTES_PER_WORD + i * elementSize;
-      result.push(readStruct(segment, elementOffset, schema));
+      for (let i = 0; i < elementCount; i++) {
+        const elementOffset = tagOffset + BYTES_PER_WORD + i * elementSize;
+        result.push(readStruct(segment, elementOffset, schema));
+      }
+    } else if (elementType.kind === 'list') {
+      // List of lists (pointer list)
+      for (let i = 0; i < elementCount; i++) {
+        const nestedList = readList(segment, offset + i * POINTER_SIZE_BYTES, elementType.elementType);
+        result.push(nestedList);
+      }
     }
   }
 

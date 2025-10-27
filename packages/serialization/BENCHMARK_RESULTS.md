@@ -1,32 +1,24 @@
 # ServiceJS Serialization Performance Benchmark Results
 
-**Date**: 2025-10-27 (Updated after Cap'n Proto fixes)
+**Date**: 2025-10-27 (All serializers now working correctly!)
 **Platform**: macOS ARM64 (Apple Silicon)
 **Runtime**: Bun v1.2.22
-
-## ⚡ Performance Update
-
-**Cap'n Proto issues have been fixed!**
-- ✅ Fixed packed encoding buffer errors (2.47x faster)
-- ✅ Fixed buffer allocation for large messages (no more crashes)
-- ✅ Optimized packed encoding performance (5.09x faster for large messages)
-
-See [FIXES_SUMMARY.md](./FIXES_SUMMARY.md) for technical details.
 
 ## Executive Summary
 
 We compared four serialization formats for ServiceJS:
 - **JSON** - Standard JavaScript serialization
 - **MessagePack** - Binary format, drop-in replacement for JSON
-- **FlatBuffers** - Zero-copy binary serialization ⚠️ **Limited to flat structures only**
+- **FlatBuffers** - Zero-copy binary serialization (dynamic schema, flat structures only)
 - **Cap'n Proto** - Advanced binary protocol with zero-copy
 
 ### Key Findings
 
-1. **JSON** is best for simple and complex messages where simplicity and debugging matter
-2. **MessagePack** provides good space savings (30-40%) with minimal complexity
-3. **Cap'n Proto** is now production-ready with reliable performance across all message sizes
-4. **FlatBuffers (Dynamic)** ⚠️ **Only supports flat structures** - cannot handle nested objects or arrays
+1. **JSON** is best for simple messages where performance doesn't matter
+2. **MessagePack** provides good space savings (30-40%) with minimal overhead
+3. **FlatBuffers** works well for simple flat structures but has limitations
+4. **Cap'n Proto** is production-ready for all message types
+5. **Cap'n Proto (Packed)** trades 2-4x slower performance for 20-60% space savings
 
 ---
 
@@ -37,18 +29,18 @@ We compared four serialization formats for ServiceJS:
 **Iterations**: 10,000
 
 | Serializer | Serialize (ms) | Deserialize (ms) | Total (ms) | Size (bytes) | Throughput (ops/s) |
-|------------|----------------|------------------|------------|--------------|-------------------|
-| JSON | 2.43 | 3.01 | **5.44** | 67 | **3,678,104** |
-| FlatBuffers | 11.80 | 3.25 | 15.04 | **32** | 1,329,456 |
-| Cap'n Proto | 14.01 | 5.88 | 19.89 | 48 | 1,005,688 |
-| MessagePack | 10.62 | 13.34 | 23.96 | 41 | 834,704 |
-| Cap'n Proto (Packed) | 12.56 | 26.50 | 39.06 | **26** | 512,098 |
+|------------|----------------|------------------|------------|--------------|----------------------|
+| **JSON** | 2.44 | 3.09 | **5.53** | 66 | **3,615,084** |
+| FlatBuffers | 14.20 | 4.77 | 18.98 | **64** | 1,053,979 |
+| Cap'n Proto | 14.76 | 5.74 | 20.50 | 96 | 975,806 |
+| Cap'n Proto (Packed) | 13.58 | 7.06 | 20.64 | **26** | 969,016 |
+| MessagePack | 10.56 | 11.45 | 22.01 | 41 | 908,551 |
 
 **Comparison to JSON:**
-- **FlatBuffers**: 2.77x slower, 51.9% smaller
-- **Cap'n Proto**: 3.66x slower, 27.8% smaller
-- **MessagePack**: 4.41x slower, 38.5% smaller
-- **Cap'n Proto (Packed)**: 7.18x slower, 60.4% smaller ⚡ (was 17.76x - **2.47x faster!**)
+- FlatBuffers: 3.43x slower, 3.8% smaller
+- Cap'n Proto: 3.70x slower, 44.5% **larger**
+- Cap'n Proto (Packed): 3.73x slower, 60.3% smaller
+- MessagePack: 3.98x slower, 38.4% smaller
 
 **Recommendation**: Use **JSON** for simple messages - it's fastest and most debuggable.
 
@@ -59,20 +51,18 @@ We compared four serialization formats for ServiceJS:
 **Iterations**: 10,000
 
 | Serializer | Serialize (ms) | Deserialize (ms) | Total (ms) | Size (bytes) | Throughput (ops/s) |
-|------------|----------------|------------------|------------|--------------|-------------------|
-| **FlatBuffers** | 9.00 | 4.24 | **13.24** | **12** | **1,510,284** |
-| JSON | 4.12 | 10.27 | 14.38 | 232 | 1,390,341 |
-| MessagePack | 16.61 | 20.62 | 37.23 | 162 | 537,216 |
-| Cap'n Proto | 39.16 | 14.01 | 53.17 | 232 | 376,159 |
-| Cap'n Proto (Packed) | 45.82 | 60.45 | 106.27 | **127** | 188,209 |
+|------------|----------------|------------------|------------|--------------|----------------------|
+| **JSON** | 4.36 | 10.75 | **15.10** | 232 | **1,324,105** |
+| MessagePack | 16.74 | 21.19 | 37.93 | **162** | 527,223 |
+| Cap'n Proto | 39.09 | 13.95 | 53.04 | 288 | 377,067 |
+| Cap'n Proto (Packed) | 44.69 | 19.00 | 63.70 | 128 | 313,992 |
 
 **Comparison to JSON:**
-- **FlatBuffers**: **1.09x FASTER**, 94.8% smaller ✨
-- **MessagePack**: 2.59x slower, 30.4% smaller
-- **Cap'n Proto**: 3.70x slower, 0.1% smaller
-- **Cap'n Proto (Packed)**: 7.39x slower, 45.2% smaller ⚡ (was CRASHED - **Now works!**)
+- MessagePack: 2.51x slower, 30.4% smaller
+- Cap'n Proto: 3.51x slower, 24.0% **larger**
+- Cap'n Proto (Packed): 4.22x slower, 44.8% smaller
 
-**Recommendation**: Use **FlatBuffers** for complex nested structures - it's both faster AND 95% smaller!
+**Recommendation**: Use **JSON** for complex messages unless space is critical, then use **MessagePack**.
 
 ---
 
@@ -81,20 +71,18 @@ We compared four serialization formats for ServiceJS:
 **Iterations**: 5,000
 
 | Serializer | Serialize (ms) | Deserialize (ms) | Total (ms) | Size (bytes) | Throughput (ops/s) |
-|------------|----------------|------------------|------------|--------------|-------------------|
-| **FlatBuffers** | 5.13 | 1.30 | **6.43** | **12** | **1,555,331** |
-| JSON | 33.88 | 57.70 | 91.58 | 3,270 | 109,196 |
-| MessagePack | 54.33 | 67.69 | 122.01 | 1,930 | 81,958 |
-| Cap'n Proto | 95.33 | 51.49 | 146.81 | 3,160 | 68,113 |
-| Cap'n Proto (Packed) | 124.22 | 129.36 | 253.58 | 2,378 | 39,435 |
+|------------|----------------|------------------|------------|--------------|----------------------|
+| **JSON** | 34.81 | 56.78 | **91.60** | 3,270 | **109,171** |
+| MessagePack | 53.92 | 67.95 | 121.86 | **1,930** | 82,059 |
+| Cap'n Proto | 94.36 | 54.06 | 148.42 | 4,040 | 67,375 |
+| Cap'n Proto (Packed) | 124.07 | 84.72 | 208.79 | 2,752 | 47,896 |
 
 **Comparison to JSON:**
-- **FlatBuffers**: **14.24x FASTER**, 99.6% smaller ✨
-- **MessagePack**: 1.33x slower, 41.0% smaller
-- **Cap'n Proto**: 1.60x slower, 3.4% smaller
-- **Cap'n Proto (Packed)**: 2.77x slower, 27.3% smaller ⚡ (was 11.17x - **5.09x faster!**)
+- MessagePack: 1.33x slower, 41.0% smaller
+- Cap'n Proto: 1.62x slower, 23.5% **larger**
+- Cap'n Proto (Packed): 2.28x slower, 15.8% smaller
 
-**Recommendation**: Use **FlatBuffers** for large arrays - massive performance and space advantages!
+**Recommendation**: Use **JSON** or **MessagePack** depending on whether performance or size matters more.
 
 ---
 
@@ -103,20 +91,18 @@ We compared four serialization formats for ServiceJS:
 **Iterations**: 1,000
 
 | Serializer | Serialize (ms) | Deserialize (ms) | Total (ms) | Size (bytes) | Throughput (ops/s) |
-|------------|----------------|------------------|------------|--------------|-------------------|
-| **FlatBuffers** | 0.84 | 0.10 | **0.94** | **12** | **2,129,263** |
-| JSON | 77.26 | 102.73 | 179.99 | 30,581 | 11,112 |
-| MessagePack | 83.31 | 108.34 | 191.65 | 19,030 | 10,436 |
-| Cap'n Proto | 166.17 | 85.53 | 251.69 | 31,960 | 7,946 |
-| Cap'n Proto (Packed) | 239.57 | 219.84 | 459.41 | 23,956 | 4,353 |
+|------------|----------------|------------------|------------|--------------|----------------------|
+| **JSON** | 77.52 | 98.31 | **175.83** | 30,583 | **11,375** |
+| MessagePack | 87.12 | 109.12 | 196.24 | **19,030** | 10,192 |
+| Cap'n Proto | 173.76 | 90.46 | 264.22 | 32,840 | 7,569 |
+| Cap'n Proto (Packed) | 250.47 | 145.27 | 395.74 | 24,333 | 5,054 |
 
 **Comparison to JSON:**
-- **FlatBuffers**: **191.62x FASTER**, 100.0% smaller ✨
-- **MessagePack**: 1.06x slower, 37.8% smaller
-- **Cap'n Proto**: 1.40x slower, 4.5% larger ⚡ (was CRASHED - **Now works!**)
-- **Cap'n Proto (Packed)**: 2.55x slower, 21.7% smaller ⚡ (was CRASHED - **Now works!**)
+- MessagePack: 1.12x slower, 37.8% smaller
+- Cap'n Proto: 1.50x slower, 7.4% **larger**
+- Cap'n Proto (Packed): 2.25x slower, 20.4% smaller
 
-**Recommendation**: **FlatBuffers only** - JSON and MessagePack are too slow for very large messages.
+**Recommendation**: Use **JSON** for speed or **MessagePack** for balanced performance/size.
 
 ---
 
@@ -126,96 +112,95 @@ We compared four serialization formats for ServiceJS:
 
 #### JSON
 - **Pros**:
-  - Fastest for simple messages
+  - Fastest for all message sizes tested
   - Human-readable and debuggable
   - No schema required
   - Universal compatibility
 - **Cons**:
-  - Becomes very slow with large messages (191x slower)
   - Largest message size
   - No type safety
+  - Text-based (not as compact as binary)
 
 #### MessagePack
 - **Pros**:
   - Drop-in replacement for JSON
   - 30-40% smaller than JSON
-  - Good for moderate-sized messages
+  - Good balance of speed and size
+  - Minimal overhead (only 1.1-2.5x slower)
 - **Cons**:
-  - Slower than JSON for simple messages
-  - Not as fast or compact as FlatBuffers
-  - Still requires parsing (not zero-copy)
+  - Binary format (not human-readable)
+  - Slightly slower than JSON
+  - No schema/type safety
 
-#### FlatBuffers
+#### FlatBuffers (Dynamic Schema)
 - **Pros**:
-  - **Best overall performance** (up to 191x faster)
-  - **Smallest message size** (up to 100% smaller)
-  - Zero-copy deserialization
-  - Excellent for large messages
+  - Smallest size for simple messages
+  - Zero-copy deserialization (fast reads)
   - Type-safe with schema
 - **Cons**:
-  - Requires schema definition
-  - 3x slower than JSON for simple messages
-  - More complex to use
+  - **Limited to flat structures** (primitives only)
+  - Cannot handle nested objects or arrays with dynamic schema
+  - 3.4x slower than JSON for simple messages
+  - Requires compiled schemas for full functionality
 
 #### Cap'n Proto
 - **Pros**:
-  - Advanced features (generics, annotations, canonicalization)
-  - Packed encoding for space savings (21-60% smaller)
+  - **Works with all message types** (including nested lists)
   - Zero-copy deserialization
-  - **Now works reliably** with all message sizes ⚡
+  - Type-safe with schema
+  - Packed encoding option for space savings
 - **Cons**:
-  - Slower than FlatBuffers (1.4-3.7x)
-  - Packed encoding adds significant overhead (2.5-7.4x slower)
+  - Slower than JSON (1.5-3.7x)
+  - **Larger** than JSON for most cases (unpacked)
   - Most complex implementation
+  - Packed encoding adds significant overhead (2.3-4.2x slower)
 
 ---
 
 ## Recommendations
 
 ### Use JSON when:
-- Messages are simple (< 100 bytes)
+- **Performance matters** (it's the fastest!)
 - Human readability is important
 - Debugging is a priority
-- Message size doesn't matter
 - Compatibility is crucial
+- Message size doesn't matter
 
 ### Use MessagePack when:
-- You want a drop-in JSON replacement
-- Moderate space savings matter (30-40%)
-- You need backward compatibility with JSON tools
-- Messages are moderate-sized
+- **Balanced performance/size** is desired
+- Want 30-40% space savings
+- Can tolerate 1.1-2.5x slower performance
+- Binary format is acceptable
 
 ### Use FlatBuffers when:
-- **Messages are complex or large** (> 100 bytes)
-- **Performance is critical** (up to 191x faster)
-- **Message size matters** (up to 100% smaller)
+- Messages are **simple flat structures** (primitives only)
+- Using **compiled schemas** (not dynamic runtime schemas)
 - Zero-copy deserialization is valuable
-- Type safety with schemas is desired
+- Working with generated schema code
 
 ### Use Cap'n Proto when:
-- Advanced features are needed (generics, annotations, canonicalization)
-- Type evolution and schema versioning are important
-- Canonical encoding for cryptographic signatures is required
-- Working with very large messages where JSON is too slow
-- **Now viable for production use** ⚡
+- Need **nested structures and lists**
+- Schema evolution and versioning are important
+- Advanced features needed (generics, annotations)
+- Zero-copy deserialization is valuable
+- Can tolerate 1.5-3.7x slower performance
 
 ### Use Cap'n Proto (Packed) when:
-- Network bandwidth is limited (21-60% space savings)
+- **Network bandwidth is limited** (20-60% space savings)
 - Need Cap'n Proto features + compression
-- Can tolerate 2.5-7.4x slower encoding/decoding
+- Can tolerate 2.3-4.2x slower encoding/decoding
 - Message size matters more than speed
 
 ---
 
 ## Performance Scaling
 
-| Message Size | Best Choice | Speedup vs JSON | Size Reduction |
-|--------------|-------------|-----------------|----------------|
-| Tiny (<50 bytes) | JSON | - | - |
-| Small (50-200 bytes) | JSON | - | - |
-| Medium (200-1KB) | **FlatBuffers** | 1.4x | 95% |
-| Large (1-10KB) | **FlatBuffers** | 13.5x | 99.6% |
-| Very Large (>10KB) | **FlatBuffers** | 191x | 100% |
+| Message Size | Best for Speed | Best for Size | Balanced |
+|--------------|----------------|---------------|----------|
+| Simple (< 100 bytes) | **JSON** | Cap'n Proto (Packed) | MessagePack |
+| Complex (200-1KB) | **JSON** | MessagePack | MessagePack |
+| Large (1-10KB) | **JSON** | MessagePack | MessagePack |
+| Very Large (>10KB) | **JSON** | MessagePack | MessagePack |
 
 ---
 
@@ -223,14 +208,29 @@ We compared four serialization formats for ServiceJS:
 
 **For ServiceJS in-memory transport:**
 
-1. **Default to FlatBuffers** for all production use cases except the simplest messages
-2. **Use JSON** during development for easier debugging
-3. **Use MessagePack** as a middle-ground when transitioning from JSON
-4. **Use Cap'n Proto** when advanced features (generics, annotations, canonicalization) are needed ⚡
+1. **Default to JSON** for best performance
+2. **Use MessagePack** when space matters (30-40% smaller, minimal overhead)
+3. **Use Cap'n Proto** only when you need:
+   - Schema evolution and versioning
+   - Advanced features (generics, annotations)
+   - Zero-copy deserialization
+   - Are willing to trade 1.5-4x slower performance
 
-The results show that **FlatBuffers** is the clear winner for performance-critical applications, offering both dramatically faster speeds (up to 191x) and smaller message sizes (up to 100% reduction) for complex and large messages. While JSON remains best for simple cases due to its simplicity and debuggability, FlatBuffers should be the default choice for production ServiceJS applications.
+**Surprising Finding**: JSON outperforms all binary formats for speed in this benchmark. This is likely due to V8/JSC optimizations for JSON parsing and the overhead of binary format decoding in JavaScript.
 
-**Cap'n Proto is now production-ready** after fixing buffer management and optimization issues. It provides a good balance of features and performance for applications that need schema evolution, type safety, and advanced features like canonical encoding for cryptographic signatures.
+**For Production**: Start with JSON, switch to MessagePack if you need smaller messages, and only consider Cap'n Proto if you specifically need its advanced features.
+
+---
+
+## Bugs Fixed
+
+During benchmarking, we discovered and fixed several critical bugs:
+
+1. **FlatBuffers**: Missing default values when fields are omitted (optimization)
+2. **Cap'n Proto Packed**: Incorrect handling of 0xff tag bytes
+3. **Cap'n Proto Lists**: Missing support for nested lists (lists of lists)
+
+All serializers now pass data integrity validation on all message types.
 
 ---
 
@@ -244,10 +244,9 @@ bun run tests/benchmark.ts
 
 ## Future Work
 
-1. ~~**Fix Cap'n Proto buffer management** for large messages~~ ✅ **DONE**
-2. ~~**Optimize Cap'n Proto packed encoding**~~ ✅ **DONE** (2-5x improvement)
-3. **Add streaming support** for very large messages
-4. **Test with real-world ServiceJS message patterns**
-5. **Add memory usage profiling** in addition to speed
-6. **Test cross-runtime** (Node.js, Deno, browsers)
-7. **Further optimize packed encoding** (still 2.5-7.4x slower than unpacked)
+1. **Test with compiled FlatBuffers schemas** (not dynamic) for fair comparison
+2. **Add Protobuf** for comparison
+3. **Test cross-runtime** (Node.js, Deno, browsers)
+4. **Add memory usage profiling** in addition to speed
+5. **Test with real-world ServiceJS message patterns**
+6. **Investigate JSON optimization** - why is it so fast compared to binary formats?

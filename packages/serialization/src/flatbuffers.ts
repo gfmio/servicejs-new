@@ -250,7 +250,25 @@ export const createDynamicFlatBuffersSchema = <T extends Record<string, any>>(
 
         const vtableOffset = buffer.readInt16(table - buffer.readInt32(table) + 4 + i * 2);
 
-        if (vtableOffset === 0) continue;
+        if (vtableOffset === 0) {
+          // Field not present - use default value
+          // FlatBuffers optimizes by not storing fields with default values
+          switch (field.type) {
+            case 'number':
+              result[field.name] = 0;
+              break;
+            case 'string':
+              result[field.name] = '';
+              break;
+            case 'boolean':
+              result[field.name] = false;
+              break;
+            case 'bytes':
+              result[field.name] = new Uint8Array(0);
+              break;
+          }
+          continue;
+        }
 
         const fieldOffset = table + vtableOffset;
 

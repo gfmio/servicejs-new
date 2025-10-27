@@ -8,7 +8,8 @@
  * Algorithm:
  * - For each 8-byte word, write a tag byte indicating which bytes are non-zero
  * - Only write the non-zero bytes
- * - Special tags 0x00 and 0xff for runs of zeros and runs of 0xff
+ * - Special tag 0x00: followed by count N = next N words are all zeros (skip)
+ * - Special tag 0xff: followed by count N = next N words are literal/unpacked (copy N*8 bytes as-is)
  */
 
 /**
@@ -29,22 +30,16 @@ export const pack = (data: Uint8Array): Uint8Array => {
     const wordEnd = Math.min(i + 8, data.length);
     const wordSize = wordEnd - i;
 
-    // Fast path: check if word is all zeros or all 0xff
+    // Fast path: check if word is all zeros
     let allZero = true;
-    let allFF = true;
     for (let j = i; j < wordEnd; j++) {
-      const byte = data[j]!;
-      if (byte !== 0) allZero = false;
-      if (byte !== 0xff) allFF = false;
-      if (!allZero && !allFF) break;
+      if (data[j] !== 0) {
+        allZero = false;
+        break;
+      }
     }
 
-    // Pad check for last word
     const isFullWord = wordSize === 8;
-    if (!isFullWord && wordSize < 8) {
-      // For partial words, treat padding as zeros
-      allFF = false;
-    }
 
     if (allZero && isFullWord) {
       // Count consecutive zero words
@@ -70,30 +65,6 @@ export const pack = (data: Uint8Array): Uint8Array => {
       result[resultPos++] = 0x00;
       result[resultPos++] = zeroCount;
       i += zeroCount * 8;
-    } else if (allFF && isFullWord) {
-      // Count consecutive 0xff words
-      let ffCount = 1;
-      let j = i + 8;
-      while (j + 7 < data.length && ffCount < 255) {
-        let isFFWord = true;
-        for (let k = j; k < j + 8; k++) {
-          if (data[k] !== 0xff) {
-            isFFWord = false;
-            break;
-          }
-        }
-        if (isFFWord) {
-          ffCount++;
-          j += 8;
-        } else {
-          break;
-        }
-      }
-
-      // Write tag 0xff followed by count
-      result[resultPos++] = 0xff;
-      result[resultPos++] = ffCount;
-      i += ffCount * 8;
     } else {
       // Normal word: create tag byte and collect non-zero bytes
       let tag = 0;
@@ -147,19 +118,6 @@ export const unpack = (data: Uint8Array): Uint8Array => {
       }
       // Fill zeros (already zero in Uint8Array, just advance position)
       resultPos += count * 8;
-    } else if (tag === 0xff) {
-      // Run of 0xff words
-      if (i >= data.length) {
-        throw new Error('Packed encoding error: missing count after 0xff tag');
-      }
-      const count = data[i++];
-      if (count === undefined) {
-        throw new Error('Packed encoding error: missing count');
-      }
-      // Fill 0xff
-      for (let j = 0; j < count * 8; j++) {
-        result[resultPos++] = 0xff;
-      }
     } else {
       // Normal word: tag indicates which bytes are non-zero
       for (let bit = 0; bit < 8; bit++) {
