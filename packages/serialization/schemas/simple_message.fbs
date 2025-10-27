@@ -1,0 +1,11 @@
+// Simple message with primitives only
+namespace Benchmark;
+
+table SimpleMessage {
+  id: uint32;
+  name: string;
+  active: bool;
+  score: double;
+}
+
+root_type SimpleMessage;

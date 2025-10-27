@@ -1,0 +1,16 @@
+// Large message with arrays
+namespace Benchmark;
+
+// Wrapper for matrix rows since FlatBuffers doesn't support [[double]]
+table MatrixRow {
+  values: [double];
+}
+
+table LargeMessage {
+  id: uint32;
+  coordinates: [double];
+  labels: [string];
+  matrix: [MatrixRow];  // Workaround for nested arrays
+}
+
+root_type LargeMessage;

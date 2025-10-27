@@ -19,6 +19,19 @@ import {
   createDynamicFlatBuffersSchema,
 } from '../src/index.js';
 import type { Serializer } from '../src/serializer.js';
+import {
+  simpleMessageCompiledSchema,
+  complexMessageCompiledSchema,
+  largeMessageCompiledSchema,
+} from '../src/flatbuffers-compiled.js';
+import {
+  simpleMessageGeneratedSerializer,
+  complexMessageGeneratedSerializer,
+  largeMessageGeneratedSerializer,
+  simpleMessageGeneratedPackedSerializer,
+  complexMessageGeneratedPackedSerializer,
+  largeMessageGeneratedPackedSerializer,
+} from '../src/capnp-compiled.js';
 
 // ============================================================================
 // Test Message Types
@@ -213,6 +226,9 @@ interface SerializerSetup<T> {
 const setupSerializers = <T>(
   capnpSchema: any,
   flatbuffersSchema: any | null,
+  flatbuffersCompiledSchema: any | null,
+  capnpGeneratedSerializer: (() => Serializer<T>) | null,
+  capnpGeneratedPackedSerializer: (() => Serializer<T>) | null,
   includeFlatBuffers = true
 ): SerializerSetup<T>[] => {
   const serializers: SerializerSetup<T>[] = [
@@ -228,8 +244,15 @@ const setupSerializers = <T>(
 
   if (includeFlatBuffers && flatbuffersSchema) {
     serializers.push({
-      name: 'FlatBuffers',
+      name: 'FlatBuffers (Dynamic)',
       serializer: createFlatBuffersSerializer<T>(flatbuffersSchema),
+    });
+  }
+
+  if (flatbuffersCompiledSchema) {
+    serializers.push({
+      name: 'FlatBuffers (Compiled)',
+      serializer: createFlatBuffersSerializer<T>(flatbuffersCompiledSchema),
     });
   }
 
@@ -243,6 +266,20 @@ const setupSerializers = <T>(
       serializer: createCapnpSerializer<T>(capnpSchema, { packed: true }),
     }
   );
+
+  if (capnpGeneratedSerializer) {
+    serializers.push({
+      name: 'Cap\'n Proto (Generated)',
+      serializer: capnpGeneratedSerializer(),
+    });
+  }
+
+  if (capnpGeneratedPackedSerializer) {
+    serializers.push({
+      name: 'Cap\'n Proto (Generated + Packed)',
+      serializer: capnpGeneratedPackedSerializer(),
+    });
+  }
 
   return serializers;
 };
@@ -467,34 +504,64 @@ const main = async () => {
   const ITERATIONS = 10000;
 
   // Benchmark 1: Simple Messages
-  // FlatBuffers works here - flat structure with primitives only
+  // Both dynamic and compiled FlatBuffers work here - flat structure with primitives only
   {
     const simpleMessages = Array.from({ length: 100 }, (_, i) => generateSimpleMessage(i));
-    const serializers = setupSerializers<SimpleMessage>(simpleCapnpSchema, simpleFlatBuffersSchema, true);
+    const serializers = setupSerializers<SimpleMessage>(
+      simpleCapnpSchema,
+      simpleFlatBuffersSchema,
+      simpleMessageCompiledSchema,
+      simpleMessageGeneratedSerializer,
+      simpleMessageGeneratedPackedSerializer,
+      true
+    );
     runBenchmark('Simple Messages (primitives only)', simpleMessages, serializers, ITERATIONS);
   }
 
   // Benchmark 2: Complex Messages
-  // FlatBuffers excluded - has nested objects (user, metadata)
+  // Dynamic FlatBuffers excluded - has nested objects (user, metadata)
+  // Compiled FlatBuffers works! (supports nested structures)
   {
     const complexMessages = Array.from({ length: 100 }, (_, i) => generateComplexMessage(i));
-    const serializers = setupSerializers<ComplexMessage>(complexCapnpSchema, null, false);
+    const serializers = setupSerializers<ComplexMessage>(
+      complexCapnpSchema,
+      null,
+      complexMessageCompiledSchema,
+      complexMessageGeneratedSerializer,
+      complexMessageGeneratedPackedSerializer,
+      false
+    );
     runBenchmark('Complex Messages (nested structures)', complexMessages, serializers, ITERATIONS);
   }
 
   // Benchmark 3: Large Messages (100 elements)
-  // FlatBuffers excluded - has arrays (coordinates, labels, matrix)
+  // Dynamic FlatBuffers excluded - has arrays (coordinates, labels, matrix)
+  // Compiled FlatBuffers works! (supports arrays)
   {
     const largeMessages = Array.from({ length: 50 }, (_, i) => generateLargeMessage(i, 100));
-    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, null, false);
+    const serializers = setupSerializers<LargeMessage>(
+      largeCapnpSchema,
+      null,
+      largeMessageCompiledSchema,
+      largeMessageGeneratedSerializer,
+      largeMessageGeneratedPackedSerializer,
+      false
+    );
     runBenchmark('Large Messages (100 elements)', largeMessages, serializers, ITERATIONS / 2);
   }
 
   // Benchmark 4: Large Messages (1000 elements)
-  // FlatBuffers excluded - has arrays
+  // Compiled FlatBuffers works!
   {
     const veryLargeMessages = Array.from({ length: 10 }, (_, i) => generateLargeMessage(i, 1000));
-    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, null, false);
+    const serializers = setupSerializers<LargeMessage>(
+      largeCapnpSchema,
+      null,
+      largeMessageCompiledSchema,
+      largeMessageGeneratedSerializer,
+      largeMessageGeneratedPackedSerializer,
+      false
+    );
     runBenchmark('Very Large Messages (1000 elements)', veryLargeMessages, serializers, ITERATIONS / 10);
   }
 

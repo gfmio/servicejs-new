@@ -1,0 +1,25 @@
+// Complex message with nested structures
+namespace Benchmark;
+
+table User {
+  id: uint32;
+  name: string;
+  email: string;
+  role: string;
+}
+
+table Metadata {
+  source: string;
+  priority: uint32;
+  flags: [bool];
+}
+
+table ComplexMessage {
+  id: uint32;
+  timestamp: uint64;
+  user: User;
+  tags: [string];
+  metadata: Metadata;
+}
+
+root_type ComplexMessage;
