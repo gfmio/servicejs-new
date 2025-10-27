@@ -18,15 +18,15 @@ See [FIXES_SUMMARY.md](./FIXES_SUMMARY.md) for technical details.
 We compared four serialization formats for ServiceJS:
 - **JSON** - Standard JavaScript serialization
 - **MessagePack** - Binary format, drop-in replacement for JSON
-- **FlatBuffers** - Zero-copy binary serialization
+- **FlatBuffers** - Zero-copy binary serialization ⚠️ **Limited to flat structures only**
 - **Cap'n Proto** - Advanced binary protocol with zero-copy
 
 ### Key Findings
 
-1. **JSON** is best for simple messages (< 100 bytes) where simplicity and debugging matter
-2. **FlatBuffers** is the **clear winner** for complex and large messages (2-191x faster, 52-100% smaller)
-3. **MessagePack** provides moderate space savings (30-40%) with minimal complexity
-4. **Cap'n Proto** has some buffer management issues that need fixing but shows promise for complex messages
+1. **JSON** is best for simple and complex messages where simplicity and debugging matter
+2. **MessagePack** provides good space savings (30-40%) with minimal complexity
+3. **Cap'n Proto** is now production-ready with reliable performance across all message sizes
+4. **FlatBuffers (Dynamic)** ⚠️ **Only supports flat structures** - cannot handle nested objects or arrays
 
 ---
 

@@ -106,56 +106,60 @@ const generateLargeMessage = (id: number, size: number): LargeMessage => ({
 // ============================================================================
 
 // Simple Message Schemas
+// NOTE: slot values are byte offsets in the data section (not multipliers!)
+// Data layout: id(0-3), active(4), padding(5-7), score(8-15)
 const simpleCapnpSchema = createCapnpSchema({
   name: 'SimpleMessage',
   fields: [
-    { name: 'id', type: 'uint32', slot: 0 },
-    { name: 'name', type: 'text', slot: 0 },
-    { name: 'active', type: 'bool', slot: 1 },
-    { name: 'score', type: 'float64', slot: 2 },
+    { name: 'id', type: 'uint32', slot: 0 },      // bytes 0-3
+    { name: 'name', type: 'text', slot: 0 },       // pointer slot 0
+    { name: 'active', type: 'bool', slot: 4 },    // byte 4
+    { name: 'score', type: 'float64', slot: 8 },   // bytes 8-15 (8-byte aligned)
   ],
 });
 
 const simpleFlatBuffersSchema = createDynamicFlatBuffersSchema({
   name: 'SimpleMessage',
   fields: [
-    { name: 'id', type: 'uint32' },
+    { name: 'id', type: 'number' },
     { name: 'name', type: 'string' },
-    { name: 'active', type: 'bool' },
-    { name: 'score', type: 'float64' },
+    { name: 'active', type: 'boolean' },
+    { name: 'score', type: 'number' },
   ],
 });
 
 // Complex Message Schemas
+// Data layout: id(0-3), padding(4-7), timestamp(8-15)
+// Pointers: user(0), tags(1), metadata(2)
 const complexCapnpSchema = createCapnpSchema({
   name: 'ComplexMessage',
   fields: [
-    { name: 'id', type: 'uint32', slot: 0 },
-    { name: 'timestamp', type: 'uint64', slot: 1 },
+    { name: 'id', type: 'uint32', slot: 0 },        // bytes 0-3
+    { name: 'timestamp', type: 'uint64', slot: 8 },  // bytes 8-15 (8-byte aligned)
     { name: 'user', type: {
       kind: 'struct',
       schema: createCapnpSchema({
         name: 'User',
         fields: [
-          { name: 'id', type: 'uint32', slot: 0 },
-          { name: 'name', type: 'text', slot: 0 },
-          { name: 'email', type: 'text', slot: 1 },
-          { name: 'role', type: 'text', slot: 2 },
+          { name: 'id', type: 'uint32', slot: 0 },    // bytes 0-3
+          { name: 'name', type: 'text', slot: 0 },     // pointer 0
+          { name: 'email', type: 'text', slot: 1 },    // pointer 1
+          { name: 'role', type: 'text', slot: 2 },     // pointer 2
         ],
       }),
-    }, slot: 0 },
-    { name: 'tags', type: { kind: 'list', elementType: 'text' }, slot: 1 },
+    }, slot: 0 },                                      // pointer 0
+    { name: 'tags', type: { kind: 'list', elementType: 'text' }, slot: 1 },  // pointer 1
     { name: 'metadata', type: {
       kind: 'struct',
       schema: createCapnpSchema({
         name: 'Metadata',
         fields: [
-          { name: 'source', type: 'text', slot: 0 },
-          { name: 'priority', type: 'uint32', slot: 0 },
-          { name: 'flags', type: { kind: 'list', elementType: 'bool' }, slot: 1 },
+          { name: 'source', type: 'text', slot: 0 },     // pointer 0
+          { name: 'priority', type: 'uint32', slot: 0 }, // bytes 0-3
+          { name: 'flags', type: { kind: 'list', elementType: 'bool' }, slot: 1 }, // pointer 1
         ],
       }),
-    }, slot: 2 },
+    }, slot: 2 },                                       // pointer 2
   ],
 });
 
@@ -174,13 +178,15 @@ const complexFlatBuffersSchema = createDynamicFlatBuffersSchema({
 });
 
 // Large Message Schemas
+// Data layout: id(0-3)
+// Pointers: coordinates(0), labels(1), matrix(2)
 const largeCapnpSchema = createCapnpSchema({
   name: 'LargeMessage',
   fields: [
-    { name: 'id', type: 'uint32', slot: 0 },
-    { name: 'coordinates', type: { kind: 'list', elementType: 'float64' }, slot: 0 },
-    { name: 'labels', type: { kind: 'list', elementType: 'text' }, slot: 1 },
-    { name: 'matrix', type: { kind: 'list', elementType: { kind: 'list', elementType: 'float64' } }, slot: 2 },
+    { name: 'id', type: 'uint32', slot: 0 },                                           // bytes 0-3
+    { name: 'coordinates', type: { kind: 'list', elementType: 'float64' }, slot: 0 },  // pointer 0
+    { name: 'labels', type: { kind: 'list', elementType: 'text' }, slot: 1 },          // pointer 1
+    { name: 'matrix', type: { kind: 'list', elementType: { kind: 'list', elementType: 'float64' } }, slot: 2 }, // pointer 2
   ],
 });
 
@@ -206,9 +212,10 @@ interface SerializerSetup<T> {
 
 const setupSerializers = <T>(
   capnpSchema: any,
-  flatbuffersSchema: any
+  flatbuffersSchema: any | null,
+  includeFlatBuffers = true
 ): SerializerSetup<T>[] => {
-  return [
+  const serializers: SerializerSetup<T>[] = [
     {
       name: 'JSON',
       serializer: createJsonSerializer<T>(),
@@ -217,10 +224,16 @@ const setupSerializers = <T>(
       name: 'MessagePack',
       serializer: createMessagePackSerializer<T>(),
     },
-    {
+  ];
+
+  if (includeFlatBuffers && flatbuffersSchema) {
+    serializers.push({
       name: 'FlatBuffers',
       serializer: createFlatBuffersSerializer<T>(flatbuffersSchema),
-    },
+    });
+  }
+
+  serializers.push(
     {
       name: 'Cap\'n Proto',
       serializer: createCapnpSerializer<T>(capnpSchema, { packed: false }),
@@ -228,8 +241,65 @@ const setupSerializers = <T>(
     {
       name: 'Cap\'n Proto (Packed)',
       serializer: createCapnpSerializer<T>(capnpSchema, { packed: true }),
-    },
-  ];
+    }
+  );
+
+  return serializers;
+};
+
+// ============================================================================
+// Data Integrity Validation
+// ============================================================================
+
+/**
+ * Deep equality check for messages
+ */
+const deepEqual = (a: any, b: any): boolean => {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a === 'object') {
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      return a.every((val, i) => deepEqual(val, b[i]));
+    }
+
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+
+    return keysA.every(key => deepEqual(a[key], b[key]));
+  }
+
+  return false;
+};
+
+/**
+ * Validate that serialization round-trip preserves data
+ */
+const validateIntegrity = <T>(
+  serializer: Serializer<T>,
+  original: T,
+  serializerName: string
+): void => {
+  const serialized = serializer.serialize(original);
+  if (serialized._tag === 'Err') {
+    throw new Error(`${serializerName}: Serialization failed: ${JSON.stringify(serialized.error)}`);
+  }
+
+  const deserialized = serializer.deserialize(serialized.value);
+  if (deserialized._tag === 'Err') {
+    throw new Error(`${serializerName}: Deserialization failed: ${JSON.stringify(deserialized.error)}`);
+  }
+
+  if (!deepEqual(original, deserialized.value)) {
+    console.error('Original:', JSON.stringify(original, null, 2));
+    console.error('Deserialized:', JSON.stringify(deserialized.value, null, 2));
+    throw new Error(`${serializerName}: Data integrity check failed - deserialized data does not match original`);
+  }
 };
 
 // ============================================================================
@@ -273,6 +343,12 @@ const runBenchmark = <T>(
         if (serialized._tag === 'Ok') {
           setup.serializer.deserialize(serialized.value);
         }
+      }
+
+      // Validate data integrity on a few samples
+      console.log(`  Validating integrity...`);
+      for (let i = 0; i < Math.min(5, preparedData.length); i++) {
+        validateIntegrity(setup.serializer, preparedData[i]!, setup.name);
       }
 
       // First, collect serialized data (we'll use this for deserialization benchmark)
@@ -391,30 +467,34 @@ const main = async () => {
   const ITERATIONS = 10000;
 
   // Benchmark 1: Simple Messages
+  // FlatBuffers works here - flat structure with primitives only
   {
     const simpleMessages = Array.from({ length: 100 }, (_, i) => generateSimpleMessage(i));
-    const serializers = setupSerializers<SimpleMessage>(simpleCapnpSchema, simpleFlatBuffersSchema);
+    const serializers = setupSerializers<SimpleMessage>(simpleCapnpSchema, simpleFlatBuffersSchema, true);
     runBenchmark('Simple Messages (primitives only)', simpleMessages, serializers, ITERATIONS);
   }
 
   // Benchmark 2: Complex Messages
+  // FlatBuffers excluded - has nested objects (user, metadata)
   {
     const complexMessages = Array.from({ length: 100 }, (_, i) => generateComplexMessage(i));
-    const serializers = setupSerializers<ComplexMessage>(complexCapnpSchema, complexFlatBuffersSchema);
+    const serializers = setupSerializers<ComplexMessage>(complexCapnpSchema, null, false);
     runBenchmark('Complex Messages (nested structures)', complexMessages, serializers, ITERATIONS);
   }
 
   // Benchmark 3: Large Messages (100 elements)
+  // FlatBuffers excluded - has arrays (coordinates, labels, matrix)
   {
     const largeMessages = Array.from({ length: 50 }, (_, i) => generateLargeMessage(i, 100));
-    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, largeFlatBuffersSchema);
+    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, null, false);
     runBenchmark('Large Messages (100 elements)', largeMessages, serializers, ITERATIONS / 2);
   }
 
   // Benchmark 4: Large Messages (1000 elements)
+  // FlatBuffers excluded - has arrays
   {
     const veryLargeMessages = Array.from({ length: 10 }, (_, i) => generateLargeMessage(i, 1000));
-    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, largeFlatBuffersSchema);
+    const serializers = setupSerializers<LargeMessage>(largeCapnpSchema, null, false);
     runBenchmark('Very Large Messages (1000 elements)', veryLargeMessages, serializers, ITERATIONS / 10);
   }
 
