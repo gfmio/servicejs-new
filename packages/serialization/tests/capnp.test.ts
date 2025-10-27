@@ -5,6 +5,11 @@ import {
   createCapnpSerializer,
   generateTypeScriptCode,
   parseCapnpSchema,
+  list,
+  enumType,
+  structType,
+  unionType,
+  groupType,
 } from '../src/capnp.js';
 
 describe('createCapnpSchema', () => {
@@ -755,5 +760,368 @@ describe('Default values', () => {
       // Non-zero value should be preserved
       expect(decoded.value.timeout).toBe(10000);
     }
+  });
+});
+
+describe('Cap\'n Proto Groups', () => {
+  it('should serialize and deserialize group with primitive fields', () => {
+    const addressGroup = groupType('Address', [
+      { name: 'street', type: 'text', slot: 0 },
+      { name: 'zipCode', type: 'uint32', slot: 0 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Person',
+      fields: [
+        { name: 'name', type: 'text', slot: 1 },
+        { name: 'address', type: addressGroup, slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema);
+
+    const person = {
+      name: 'Alice',
+      address: {
+        street: '123 Main St',
+        zipCode: 12345,
+      },
+    };
+
+    const encoded = serializer.serialize(person);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.name).toBe('Alice');
+      expect(decoded.value.address.street).toBe('123 Main St');
+      expect(decoded.value.address.zipCode).toBe(12345);
+    }
+  });
+
+  it('should serialize and deserialize group with mixed field types', () => {
+    const statsGroup = groupType('Stats', [
+      { name: 'count', type: 'uint32', slot: 0 },      // bytes 0-3
+      { name: 'average', type: 'float64', slot: 1 },   // bytes 8-15 (slot 1 * 8)
+      { name: 'enabled', type: 'bool', slot: 16 },     // byte 16
+      { name: 'tags', type: list('text'), slot: 0 },   // pointer 0
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Report',
+      fields: [
+        { name: 'title', type: 'text', slot: 1 },
+        { name: 'stats', type: statsGroup, slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema);
+
+    const report = {
+      title: 'Monthly Report',
+      stats: {
+        count: 100,
+        average: 45.5,
+        enabled: true,
+        tags: ['important', 'monthly'],
+      },
+    };
+
+    const encoded = serializer.serialize(report);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.title).toBe('Monthly Report');
+      expect(decoded.value.stats.count).toBe(100);
+      expect(decoded.value.stats.average).toBe(45.5);
+      expect(decoded.value.stats.enabled).toBe(true);
+      expect(decoded.value.stats.tags).toEqual(['important', 'monthly']);
+    }
+  });
+
+  it('should serialize and deserialize multiple groups', () => {
+    const personalGroup = groupType('Personal', [
+      { name: 'firstName', type: 'text', slot: 0 },
+      { name: 'lastName', type: 'text', slot: 1 },
+      { name: 'age', type: 'uint16', slot: 0 },
+    ]);
+
+    const contactGroup = groupType('Contact', [
+      { name: 'email', type: 'text', slot: 2 },
+      { name: 'phone', type: 'text', slot: 3 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Employee',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 1 },
+        { name: 'personal', type: personalGroup, slot: 0 },
+        { name: 'contact', type: contactGroup, slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema);
+
+    const employee = {
+      id: 12345,
+      personal: {
+        firstName: 'John',
+        lastName: 'Doe',
+        age: 30,
+      },
+      contact: {
+        email: 'john.doe@example.com',
+        phone: '+1-555-0100',
+      },
+    };
+
+    const encoded = serializer.serialize(employee);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.id).toBe(12345);
+      expect(decoded.value.personal.firstName).toBe('John');
+      expect(decoded.value.personal.lastName).toBe('Doe');
+      expect(decoded.value.personal.age).toBe(30);
+      expect(decoded.value.contact.email).toBe('john.doe@example.com');
+      expect(decoded.value.contact.phone).toBe('+1-555-0100');
+    }
+  });
+
+  it('should serialize and deserialize group with nested struct', () => {
+    const addressSchema = createCapnpSchema({
+      name: 'Address',
+      fields: [
+        { name: 'street', type: 'text', slot: 0 },
+        { name: 'city', type: 'text', slot: 1 },
+      ],
+    });
+
+    const locationGroup = groupType('Location', [
+      { name: 'country', type: 'text', slot: 0 },
+      { name: 'address', type: structType(addressSchema), slot: 1 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Office',
+      fields: [
+        { name: 'name', type: 'text', slot: 2 },
+        { name: 'location', type: locationGroup, slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema);
+
+    const office = {
+      name: 'HQ',
+      location: {
+        country: 'USA',
+        address: {
+          street: '123 Main St',
+          city: 'New York',
+        },
+      },
+    };
+
+    const encoded = serializer.serialize(office);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.name).toBe('HQ');
+      expect(decoded.value.location.country).toBe('USA');
+      expect(decoded.value.location.address.street).toBe('123 Main St');
+      expect(decoded.value.location.address.city).toBe('New York');
+    }
+  });
+
+  it('should handle default values in groups', () => {
+    const configGroup = groupType('Config', [
+      { name: 'timeout', type: 'uint32', slot: 0, defaultValue: 5000 },
+      { name: 'retries', type: 'uint16', slot: 2, defaultValue: 3 },
+    ]);
+
+    const schema = createCapnpSchema({
+      name: 'Service',
+      fields: [
+        { name: 'name', type: 'text', slot: 0 },
+        { name: 'config', type: configGroup, slot: 0 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema);
+
+    // Serialize with zero values (should use defaults on read)
+    const service = {
+      name: 'API',
+      config: {
+        timeout: 0,
+        retries: 0,
+      },
+    };
+
+    const encoded = serializer.serialize(service);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.name).toBe('API');
+      expect(decoded.value.config.timeout).toBe(5000);
+      expect(decoded.value.config.retries).toBe(3);
+    }
+  });
+});
+
+describe('Cap\'n Proto Multi-Segment Messages', () => {
+  it('should encode and decode multi-segment message', () => {
+    const schema = createCapnpSchema({
+      name: 'Data',
+      fields: [
+        { name: 'id', type: 'uint32', slot: 0 },
+        { name: 'content', type: 'text', slot: 0 },
+      ],
+    });
+
+    // Use multi-segment mode
+    const serializer = createCapnpSerializer(schema, { multiSegment: true });
+
+    const data = {
+      id: 42,
+      content: 'Hello, multi-segment world!',
+    };
+
+    const encoded = serializer.serialize(data);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.id).toBe(42);
+      expect(decoded.value.content).toBe('Hello, multi-segment world!');
+    }
+  });
+
+  it('should handle multi-segment message with nested structs', () => {
+    const addressSchema = createCapnpSchema({
+      name: 'Address',
+      fields: [
+        { name: 'street', type: 'text', slot: 0 },
+        { name: 'city', type: 'text', slot: 1 },
+        { name: 'zipCode', type: 'uint32', slot: 0 },
+      ],
+    });
+
+    const personSchema = createCapnpSchema({
+      name: 'Person',
+      fields: [
+        { name: 'name', type: 'text', slot: 0 },
+        { name: 'age', type: 'uint16', slot: 0 },
+        { name: 'address', type: structType(addressSchema), slot: 1 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(personSchema, { multiSegment: true });
+
+    const person = {
+      name: 'Alice',
+      age: 30,
+      address: {
+        street: '123 Main St',
+        city: 'New York',
+        zipCode: 10001,
+      },
+    };
+
+    const encoded = serializer.serialize(person);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.name).toBe('Alice');
+      expect(decoded.value.age).toBe(30);
+      expect(decoded.value.address.street).toBe('123 Main St');
+      expect(decoded.value.address.city).toBe('New York');
+      expect(decoded.value.address.zipCode).toBe(10001);
+    }
+  });
+
+  it('should handle multi-segment message with lists', () => {
+    const schema = createCapnpSchema({
+      name: 'Document',
+      fields: [
+        { name: 'title', type: 'text', slot: 0 },
+        { name: 'tags', type: list('text'), slot: 1 },
+        { name: 'counts', type: list('uint32'), slot: 2 },
+      ],
+    });
+
+    const serializer = createCapnpSerializer(schema, { multiSegment: true });
+
+    const document = {
+      title: 'Test Document',
+      tags: ['important', 'urgent', 'review'],
+      counts: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    };
+
+    const encoded = serializer.serialize(document);
+    expect(isOk(encoded)).toBe(true);
+    if (!isOk(encoded)) return;
+
+    const decoded = serializer.deserialize(encoded.value);
+    expect(isOk(decoded)).toBe(true);
+    if (isOk(decoded)) {
+      expect(decoded.value.title).toBe('Test Document');
+      expect(decoded.value.tags).toEqual(['important', 'urgent', 'review']);
+      expect(decoded.value.counts).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    }
+  });
+});
+
+describe('Cap\'n Proto Far Pointers', () => {
+  it('should write and read far pointers', () => {
+    const { createSegment, writeFarPointer, readFarPointer } = require('../src/capnp/encoding.js');
+
+    const segment = createSegment(1024);
+
+    // Write a far pointer at offset 0
+    writeFarPointer(segment, 0, 2, 64, false);
+
+    // Read it back
+    const farPointer = readFarPointer(segment, 0);
+
+    expect(farPointer.segmentIndex).toBe(2);
+    expect(farPointer.offset).toBe(64);
+    expect(farPointer.isDoubleFar).toBe(false);
+  });
+
+  it('should handle double-far pointers', () => {
+    const { createSegment, writeFarPointer, readFarPointer } = require('../src/capnp/encoding.js');
+
+    const segment = createSegment(1024);
+
+    // Write a double-far pointer
+    writeFarPointer(segment, 0, 5, 128, true);
+
+    // Read it back
+    const farPointer = readFarPointer(segment, 0);
+
+    expect(farPointer.segmentIndex).toBe(5);
+    expect(farPointer.offset).toBe(128);
+    expect(farPointer.isDoubleFar).toBe(true);
   });
 });

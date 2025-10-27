@@ -531,15 +531,15 @@ const decoded = PersonSerializer.deserialize(encoded.value);
 - ✅ **Nested Structs**: Structs containing other structs
 - ✅ **Enums**: Enumerated types with named values
 - ✅ **Unions**: Discriminated unions with tag fields
+- ✅ **Groups**: Inline struct groups for organizational purposes
 - ✅ **Default Values**: Field-level defaults for schema evolution
-- ✅ **Large Messages**: Dynamic buffer growth (single-segment, supports messages up to memory limit)
+- ✅ **Multi-segment Messages**: True multi-segment support for large messages
+- ✅ **Far Pointers**: Cross-segment references with single and double-far pointers
+- ✅ **Large Messages**: Support for messages of any size via multi-segment
 - ✅ **Code Generation**: TypeScript interface and serializer generation
 - ✅ **Schema Parsing**: Parse Cap'n Proto schema syntax
 
-**Not Supported (Low Priority):**
-- ❌ **Groups**: Use nested structs instead
-- ❌ **True Multi-segment**: Single large segment used instead (works for most cases)
-- ❌ **Far Pointers**: Not needed with single-segment approach
+**Not Supported:**
 - ❌ **Generics**: Future enhancement
 - ❌ **RPC**: Out of scope (use separate RPC layer)
 
@@ -635,6 +635,27 @@ const configSchema = createCapnpSchema({
     { name: 'retries', type: 'uint16', slot: 3, defaultValue: 3 },
   ],
 });
+
+// Groups (organizational inline structs)
+const addressGroup = groupType('Address', [
+  { name: 'street', type: 'text', slot: 0 },
+  { name: 'city', type: 'text', slot: 1 },
+  { name: 'zipCode', type: 'uint32', slot: 0 },
+]);
+
+const personSchema = createCapnpSchema({
+  name: 'Person',
+  fields: [
+    { name: 'name', type: 'text', slot: 2 },
+    { name: 'address', type: addressGroup, slot: 0 },
+  ],
+});
+
+// Multi-segment messages (for large data)
+const serializer = createCapnpSerializer(schema, {
+  multiSegment: true,
+  segmentSize: 8192, // 8KB per segment
+});
 ```
 
 ### Pros and Cons
@@ -645,14 +666,16 @@ const configSchema = createCapnpSchema({
 - ✅ TypeScript code generation
 - ✅ Dynamic or static schemas
 - ✅ Compact binary format
-- ✅ Lists, nested structs, and enums fully supported
+- ✅ Complete feature support (unions, groups, multi-segment, far pointers)
+- ✅ Lists, nested structs, enums, unions, and groups fully supported
 - ✅ Pure TypeScript implementation (works everywhere)
+- ✅ Multi-segment support for messages of any size
 
 **Cons:**
 - ❌ Most complex serializer (steeper learning curve)
 - ❌ Not human-readable (binary format)
-- ❌ Some advanced features not yet implemented (unions, groups, multi-segment)
 - ❌ Manual slot management required (must avoid overlaps)
+- ❌ More complex than JSON/MessagePack for simple use cases
 
 ---
 
@@ -889,13 +912,21 @@ interface CapnpUnionType {
   }>;
 }
 
+// Group type
+interface CapnpGroupType {
+  kind: 'group';
+  name: string;
+  fields: CapnpField[];
+}
+
 // Complete type system
 type CapnpType =
   | CapnpPrimitiveType
   | CapnpListType
   | CapnpEnumType
   | CapnpStructType
-  | CapnpUnionType;
+  | CapnpUnionType
+  | CapnpGroupType;
 
 // Field definition
 interface CapnpField {
@@ -937,9 +968,26 @@ function enumType(
 
 function structType(schema: CapnpSchema): CapnpStructType;
 
+function unionType(
+  name: string | undefined,
+  tagSlot: number,
+  fields: Array<{ name: string; type: CapnpType; discriminant: number }>
+): CapnpUnionType;
+
+function groupType(name: string, fields: CapnpField[]): CapnpGroupType;
+
+// Serializer options
+interface CapnpSerializerOptions {
+  /** Enable multi-segment messages (default: false) */
+  multiSegment?: boolean;
+  /** Initial segment size in bytes for multi-segment mode (default: 8192) */
+  segmentSize?: number;
+}
+
 // Serializer creation
 function createCapnpSerializer<T extends Record<string, any>>(
-  schema: CapnpSchema
+  schema: CapnpSchema,
+  options?: CapnpSerializerOptions
 ): Serializer<T>;
 
 // Schema utilities

@@ -62,6 +62,8 @@ export type {
   CapnpStructType,
   CapnpEnumType,
   CapnpUnionType,
+  CapnpGroupType,
+  CapnpSerializerOptions,
 } from './capnp.js';
 export {
   createCapnpSchema,

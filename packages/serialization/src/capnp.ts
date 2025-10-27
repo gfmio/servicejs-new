@@ -33,6 +33,7 @@ import {
   allocate,
   writeStruct,
   readStruct,
+  decodeMessage,
 } from './capnp/encoding.js';
 
 export type {
@@ -43,6 +44,7 @@ export type {
   CapnpStructType,
   CapnpEnumType,
   CapnpUnionType,
+  CapnpGroupType,
 } from './capnp/types.js';
 
 /**
@@ -172,8 +174,14 @@ export const createCapnpSchema = (config: {
     return 0;
   };
 
-  for (const field of config.fields) {
-    if (isPointerType(field.type)) {
+  // Helper to process fields recursively (including group fields)
+  const processField = (field: CapnpField) => {
+    if (typeof field.type === 'object' && field.type.kind === 'group') {
+      // Groups: recursively process their fields
+      for (const groupField of field.type.fields) {
+        processField(groupField);
+      }
+    } else if (isPointerType(field.type)) {
       pointerCount = Math.max(pointerCount, field.slot + 1);
     } else {
       // Calculate data word count based on field size
@@ -182,6 +190,10 @@ export const createCapnpSchema = (config: {
       const wordOffset = Math.ceil((byteOffset + fieldSize) / 8);
       dataWordCount = Math.max(dataWordCount, wordOffset);
     }
+  };
+
+  for (const field of config.fields) {
+    processField(field);
   }
 
   // Account for union discriminants
@@ -214,9 +226,27 @@ export const createCapnpSchema = (config: {
 };
 
 /**
+ * Cap'n Proto serializer options
+ */
+export interface CapnpSerializerOptions {
+  /**
+   * Enable multi-segment messages
+   * @default false
+   */
+  multiSegment?: boolean;
+
+  /**
+   * Initial segment size in bytes (for multi-segment mode)
+   * @default 8192 (8KB)
+   */
+  segmentSize?: number;
+}
+
+/**
  * Create a Cap'n Proto serializer from a schema
  *
  * @param schema - Cap'n Proto schema
+ * @param options - Serializer options
  * @returns Serializer
  *
  * @example
@@ -237,8 +267,10 @@ export const createCapnpSchema = (config: {
  * ```
  */
 export const createCapnpSerializer = <T extends Record<string, any>>(
-  schema: CapnpSchema
+  schema: CapnpSchema,
+  options?: CapnpSerializerOptions
 ): Serializer<T> => {
+  const multiSegment = options?.multiSegment ?? false;
   return {
     format: 'capnp',
 
@@ -291,22 +323,33 @@ export const createCapnpSerializer = <T extends Record<string, any>>(
 
     deserialize(data: Uint8Array) {
       try {
-        const segment: CapnpSegment = {
-          data: new DataView(data.buffer, data.byteOffset, data.byteLength),
-          position: 0,
-        };
+        if (multiSegment) {
+          // Multi-segment deserialization
+          const message = decodeMessage(data);
+          const rootSegment = message.segments[0];
 
-        // Read segment header
-        // const segmentCount = segment.data.getUint32(0, true) + 1;
-        // const segmentSize = segment.data.getUint32(4, true);
+          if (!rootSegment) {
+            throw new Error('No segments in decoded message');
+          }
 
-        // Root struct starts after header
-        const structOffset = 8;
+          // Root struct starts at beginning of first segment
+          const result = readStruct(rootSegment, 0, schema);
+          return ok(result as T);
+        } else {
+          // Single-segment deserialization
+          const segment: CapnpSegment = {
+            data: new DataView(data.buffer, data.byteOffset, data.byteLength),
+            position: 0,
+          };
 
-        // Read struct using the comprehensive decoding function
-        const result = readStruct(segment, structOffset, schema);
+          // Root struct starts after header (8 bytes)
+          const structOffset = 8;
 
-        return ok(result as T);
+          // Read struct using the comprehensive decoding function
+          const result = readStruct(segment, structOffset, schema);
+
+          return ok(result as T);
+        }
       } catch (error) {
         return err(
           serializationError(

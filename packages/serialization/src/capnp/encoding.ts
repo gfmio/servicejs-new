@@ -8,6 +8,7 @@
 import type {
   CapnpSchema,
   CapnpSegment,
+  CapnpMessage,
   CapnpField,
   CapnpPrimitiveType,
   CapnpType,
@@ -23,6 +24,7 @@ import type {
  */
 const BYTES_PER_WORD = 8;
 const POINTER_SIZE_BYTES = 8;
+const DEFAULT_SEGMENT_SIZE = 8192; // 8KB per segment
 
 /**
  * Create a new Cap'n Proto segment
@@ -35,7 +37,41 @@ export const createSegment = (sizeInBytes: number): CapnpSegment => {
 };
 
 /**
- * Allocate space in a segment
+ * Create a new multi-segment message
+ */
+export const createMessage = (): CapnpMessage => {
+  return {
+    segments: [createSegment(DEFAULT_SEGMENT_SIZE)],
+  };
+};
+
+/**
+ * Allocate space in a message, potentially creating new segments
+ */
+export const allocateInMessage = (message: CapnpMessage, sizeInBytes: number): { segmentIndex: number; offset: number } => {
+  // Try to allocate in the last segment
+  const lastSegmentIndex = message.segments.length - 1;
+  const lastSegment = message.segments[lastSegmentIndex];
+  const available = lastSegment.data.byteLength - lastSegment.position;
+
+  if (available >= sizeInBytes) {
+    // Enough space in current segment
+    const offset = lastSegment.position;
+    lastSegment.position += sizeInBytes;
+    return { segmentIndex: lastSegmentIndex, offset };
+  }
+
+  // Need a new segment
+  const newSegmentSize = Math.max(DEFAULT_SEGMENT_SIZE, sizeInBytes + 1024);
+  const newSegment = createSegment(newSegmentSize);
+  message.segments.push(newSegment);
+  const offset = 0;
+  newSegment.position = sizeInBytes;
+  return { segmentIndex: message.segments.length - 1, offset };
+};
+
+/**
+ * Allocate space in a segment (for single-segment operations)
  */
 export const allocate = (segment: CapnpSegment, sizeInBytes: number): number => {
   const offset = segment.position;
@@ -44,7 +80,45 @@ export const allocate = (segment: CapnpSegment, sizeInBytes: number): number => 
 };
 
 /**
- * Write a struct pointer
+ * Write a far pointer (points to another segment)
+ */
+export const writeFarPointer = (
+  segment: CapnpSegment,
+  offset: number,
+  targetSegmentIndex: number,
+  targetOffset: number,
+  isDoubleFar: boolean = false
+): void => {
+  const targetWordOffset = targetOffset / BYTES_PER_WORD;
+  const value = (targetWordOffset << 3) | (isDoubleFar ? 1 << 2 : 0) | 2; // Type 2 (far pointer)
+
+  segment.data.setUint32(offset, value, true);
+  segment.data.setUint32(offset + 4, targetSegmentIndex, true);
+};
+
+/**
+ * Read a far pointer
+ */
+export const readFarPointer = (
+  segment: CapnpSegment,
+  offset: number
+): { segmentIndex: number; offset: number; isDoubleFar: boolean } => {
+  const word1 = segment.data.getUint32(offset, true);
+  const word2 = segment.data.getUint32(offset + 4, true);
+
+  const targetWordOffset = word1 >> 3;
+  const isDoubleFar = ((word1 >> 2) & 1) !== 0;
+  const segmentIndex = word2;
+
+  return {
+    segmentIndex,
+    offset: targetWordOffset * BYTES_PER_WORD,
+    isDoubleFar,
+  };
+};
+
+/**
+ * Write a struct pointer (within same segment)
  */
 export const writeStructPointer = (
   segment: CapnpSegment,
@@ -544,21 +618,68 @@ export const writeStruct = (
         segment.data.setUint16(offset, enumValue, true);
       } else if (field.type.kind === 'group') {
         // Group field - recursively write group fields
+        // Groups are transparent - their fields are laid out in parent struct
         const groupValue = fieldValue ?? {};
+
         for (const groupField of field.type.fields) {
           const gFieldValue = groupValue[groupField.name];
-          // Recursively handle each field in the group
-          // Groups are transparent - fields are written directly to parent struct
+
           if (typeof groupField.type === 'string') {
-            if (groupField.type === 'text' && typeof gFieldValue === 'string') {
-              const encoder = new TextEncoder();
-              const byteLength = encoder.encode(gFieldValue).length;
-              const textOffset = writeText(segment, gFieldValue);
-              const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
-              writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
-            } else if (groupField.type !== 'text' && groupField.type !== 'data') {
+            if (groupField.type === 'text') {
+              // Text field in group
+              if (typeof gFieldValue === 'string') {
+                const encoder = new TextEncoder();
+                const byteLength = encoder.encode(gFieldValue).length;
+                const textOffset = writeText(segment, gFieldValue);
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                writeListPointer(segment, pointerOffset, textOffset, byteLength + 1, 2);
+              }
+            } else if (groupField.type === 'data') {
+              // Data field in group
+              if (gFieldValue instanceof Uint8Array) {
+                const dataOffset = allocate(segment, gFieldValue.length);
+                for (let i = 0; i < gFieldValue.length; i++) {
+                  segment.data.setUint8(dataOffset + i, gFieldValue[i]);
+                }
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                writeListPointer(segment, pointerOffset, dataOffset, gFieldValue.length, 2);
+              }
+            } else {
+              // Primitive field in group
               const offset = structOffset + getFieldOffset(groupField);
               writePrimitive(segment, offset, groupField.type, gFieldValue ?? groupField.defaultValue ?? 0);
+            }
+          } else if (typeof groupField.type === 'object') {
+            // Complex types in group (list, struct, etc.)
+            if (groupField.type.kind === 'list') {
+              if (Array.isArray(gFieldValue)) {
+                const listOffset = writeList(segment, groupField.type.elementType, gFieldValue);
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                const elementSizeCode = getElementSizeCode(groupField.type.elementType);
+                writeListPointer(segment, pointerOffset, listOffset, gFieldValue.length, elementSizeCode);
+              }
+            } else if (groupField.type.kind === 'struct') {
+              if (gFieldValue) {
+                const nestedSchema = groupField.type.schema;
+                const nestedSize = (nestedSchema.dataWordCount + nestedSchema.pointerCount) * BYTES_PER_WORD;
+                const nestedOffset = allocate(segment, nestedSize);
+                writeStruct(segment, nestedOffset, nestedSchema, gFieldValue);
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                writeStructPointer(
+                  segment,
+                  pointerOffset,
+                  nestedOffset,
+                  nestedSchema.dataWordCount,
+                  nestedSchema.pointerCount
+                );
+              }
+            } else if (groupField.type.kind === 'enum') {
+              const offset = structOffset + getFieldOffset(groupField);
+              const enumValue =
+                typeof gFieldValue === 'number'
+                  ? gFieldValue
+                  : groupField.type.enumerants.find((e) => e.name === gFieldValue)?.value ?? 0;
+              segment.data.setUint16(offset, enumValue, true);
             }
           }
         }
@@ -671,19 +792,73 @@ export const readStruct = (
         result[field.name] = enumerant?.name ?? enumValue;
       } else if (field.type.kind === 'group') {
         // Group field - recursively read group fields
+        // Groups are transparent - their fields are laid out in parent struct
         const groupResult: Record<string, any> = {};
+
         for (const groupField of field.type.fields) {
           if (typeof groupField.type === 'string') {
             if (groupField.type === 'text') {
+              // Text field in group
               const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
               try {
                 groupResult[groupField.name] = readText(segment, pointerOffset);
               } catch {
                 groupResult[groupField.name] = groupField.defaultValue ?? '';
               }
-            } else if (groupField.type !== 'data') {
+            } else if (groupField.type === 'data') {
+              // Data field in group
+              try {
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                const pointer = segment.data.getUint32(pointerOffset, true);
+                const offset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+                const lengthInfo = segment.data.getUint32(pointerOffset + 4, true);
+                const byteCount = lengthInfo >> 3;
+                const bytes = new Uint8Array(byteCount);
+                for (let i = 0; i < byteCount; i++) {
+                  bytes[i] = segment.data.getUint8(offset + i);
+                }
+                groupResult[groupField.name] = bytes;
+              } catch {
+                groupResult[groupField.name] = groupField.defaultValue ?? new Uint8Array(0);
+              }
+            } else {
+              // Primitive field in group
               const offset = structOffset + getFieldOffset(groupField);
-              groupResult[groupField.name] = readPrimitive(segment, offset, groupField.type);
+              const value = readPrimitive(segment, offset, groupField.type);
+              const isZeroValue =
+                value === 0 ||
+                value === false ||
+                value === null ||
+                value === undefined;
+              if (groupField.defaultValue !== undefined && isZeroValue) {
+                groupResult[groupField.name] = groupField.defaultValue;
+              } else {
+                groupResult[groupField.name] = value;
+              }
+            }
+          } else if (typeof groupField.type === 'object') {
+            // Complex types in group
+            if (groupField.type.kind === 'list') {
+              try {
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                groupResult[groupField.name] = readList(segment, pointerOffset, groupField.type.elementType);
+              } catch {
+                groupResult[groupField.name] = groupField.defaultValue ?? [];
+              }
+            } else if (groupField.type.kind === 'struct') {
+              try {
+                const pointerOffset = structOffset + dataSize + groupField.slot * POINTER_SIZE_BYTES;
+                const pointer = segment.data.getUint32(pointerOffset, true);
+                const nestedOffset = pointerOffset + POINTER_SIZE_BYTES + ((pointer >> 2) * BYTES_PER_WORD);
+                groupResult[groupField.name] = readStruct(segment, nestedOffset, groupField.type.schema);
+              } catch {
+                groupResult[groupField.name] = groupField.defaultValue ?? null;
+              }
+            } else if (groupField.type.kind === 'enum') {
+              const offset = structOffset + getFieldOffset(groupField);
+              const enumValue = segment.data.getUint16(offset, true);
+              const enumerant = groupField.type.enumerants.find((e) => e.value === enumValue);
+              groupResult[groupField.name] = enumerant?.name ?? enumValue;
             }
           }
         }
@@ -693,4 +868,85 @@ export const readStruct = (
   }
 
   return result;
+};
+
+/**
+ * Encode a multi-segment message to Uint8Array
+ */
+export const encodeMessage = (message: CapnpMessage): Uint8Array => {
+  const segmentCount = message.segments.length;
+
+  // Calculate header size
+  const headerWords = 1 + segmentCount; // segment count word + size words
+  const headerSize = headerWords * 4; // 4 bytes per word
+  const headerPadding = headerSize % 8 === 0 ? 0 : 4; // Pad to 8-byte boundary
+  const totalHeaderSize = headerSize + headerPadding;
+
+  // Calculate total size
+  let totalSize = totalHeaderSize;
+  const segmentSizes: number[] = [];
+  for (const segment of message.segments) {
+    segmentSizes.push(segment.position);
+    totalSize += segment.position;
+  }
+
+  // Create output buffer
+  const output = new Uint8Array(totalSize);
+  const view = new DataView(output.buffer);
+
+  // Write header
+  view.setUint32(0, segmentCount - 1, true); // Segment count minus 1
+  for (let i = 0; i < segmentCount; i++) {
+    const sizeInWords = Math.ceil(segmentSizes[i] / BYTES_PER_WORD);
+    view.setUint32(4 + i * 4, sizeInWords, true);
+  }
+
+  // Copy segment data
+  let offset = totalHeaderSize;
+  for (const segment of message.segments) {
+    const segmentData = new Uint8Array(segment.data.buffer, 0, segment.position);
+    output.set(segmentData, offset);
+    offset += segment.position;
+  }
+
+  return output;
+};
+
+/**
+ * Decode a multi-segment message from Uint8Array
+ */
+export const decodeMessage = (data: Uint8Array): CapnpMessage => {
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+
+  // Read header
+  const segmentCountMinus1 = view.getUint32(0, true);
+  const segmentCount = segmentCountMinus1 + 1;
+
+  // Read segment sizes
+  const segmentSizes: number[] = [];
+  for (let i = 0; i < segmentCount; i++) {
+    const sizeInWords = view.getUint32(4 + i * 4, true);
+    segmentSizes.push(sizeInWords * BYTES_PER_WORD);
+  }
+
+  // Calculate header size with padding
+  const headerWords = 1 + segmentCount;
+  const headerSize = headerWords * 4;
+  const headerPadding = headerSize % 8 === 0 ? 0 : 4;
+  const totalHeaderSize = headerSize + headerPadding;
+
+  // Create segments
+  const segments: CapnpSegment[] = [];
+  let offset = totalHeaderSize;
+  for (let i = 0; i < segmentCount; i++) {
+    const segmentSize = segmentSizes[i];
+    const segmentData = new DataView(data.buffer, data.byteOffset + offset, segmentSize);
+    segments.push({
+      data: segmentData,
+      position: segmentSize, // Position at end since it's already populated
+    });
+    offset += segmentSize;
+  }
+
+  return { segments };
 };
