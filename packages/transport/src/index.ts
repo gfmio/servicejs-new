@@ -31,3 +31,19 @@ export { createWorkerTransport } from './workerTransport.js';
 // Network transport
 export type { NetworkTransportConfig } from './networkTransport.js';
 export { createNetworkTransport } from './networkTransport.js';
+
+// Transport utilities
+export type {
+  TransportRouter,
+  TransportRouterConfig,
+  RetryPolicy,
+  TimeoutConfig,
+} from './utilities.js';
+export {
+  createTransportRouter,
+  createPrefixRouter,
+  withRetry,
+  withTimeout,
+  withRetryAndTimeout,
+  defaultRetryPolicy,
+} from './utilities.js';

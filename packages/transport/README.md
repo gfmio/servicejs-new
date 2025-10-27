@@ -10,6 +10,7 @@ Location-transparent transports for ServiceJS - local, worker, and network commu
 - **Serialization**: Pluggable serializers (JSON, structured clone)
 - **Request-Reply**: Built-in support via correlation IDs
 - **Auto-Reconnect**: Configurable automatic reconnection for network transports
+- **Transport Utilities**: Routing, retry logic, timeout protection, and composition
 - **Error Handling**: Comprehensive error types and handlers
 - **TypeScript**: Full type safety and inference
 
@@ -261,6 +262,212 @@ const transport = createWorkerTransport({
   worker,
   serializer: structuredSerializer,
 });
+```
+
+## Transport Utilities
+
+The transport package includes powerful utility functions for routing, retry logic, and timeout handling.
+
+### Transport Router
+
+Route messages to different transports based on custom rules:
+
+```typescript
+import { createTransportRouter, createPrefixRouter } from '@servicejs/transport';
+
+// Create router with default transport
+const router = createTransportRouter({
+  defaultTransport: localTransport,
+  onUnroutable: (envelope) => {
+    console.log(`No route found for ${envelope.to}`);
+  }
+});
+
+// Add custom routing rules
+router.addRoute(
+  (envelope) => envelope.to.startsWith('urn:remote:'),
+  networkTransport
+);
+
+router.addRoute(
+  (envelope) => envelope.to.startsWith('urn:worker:'),
+  workerTransport
+);
+
+// Send - automatically routed
+await router.send(envelope);
+
+// Or use prefix-based router (simpler)
+const prefixRouter = createPrefixRouter({
+  'urn:local:': localTransport,
+  'urn:remote:': networkTransport,
+  'urn:worker:': workerTransport
+}, localTransport); // default transport
+```
+
+**Router API:**
+
+- `addRoute(predicate, transport)` - Add routing rule
+- `removeRoute(predicate)` - Remove routing rule
+- `send(envelope)` - Send with automatic routing
+- `getTransport(envelope)` - Get transport that would handle envelope
+
+### Retry Logic
+
+Wrap transports with automatic retry and exponential backoff:
+
+```typescript
+import { withRetry, defaultRetryPolicy } from '@servicejs/transport';
+
+const reliableTransport = withRetry(networkTransport, {
+  maxAttempts: 5,
+  initialDelay: 100,       // Start with 100ms delay
+  maxDelay: 5000,          // Max 5 seconds between retries
+  backoffMultiplier: 2,    // Double delay each time
+  jitter: 0.1,             // Add 10% random jitter
+
+  // Custom retry logic
+  shouldRetry: (error) => {
+    return error.type === 'CONNECTION_FAILED' ||
+           error.type === 'SEND_FAILED';
+  },
+
+  // Monitor retries
+  onRetry: (attempt, error, delay) => {
+    console.log(`Retry ${attempt} after ${delay}ms:`, error.type);
+  }
+});
+
+// Sends automatically retry on failure
+await reliableTransport.send(envelope);
+```
+
+**Retry Policy Options:**
+
+- `maxAttempts` - Maximum retry attempts
+- `initialDelay` - Starting delay in milliseconds
+- `maxDelay` - Maximum delay cap
+- `backoffMultiplier` - Exponential backoff factor
+- `jitter` - Random jitter factor (0-1)
+- `shouldRetry` - Predicate to determine if error is retryable
+- `onRetry` - Callback invoked before each retry
+
+**Default Policy:**
+
+The `defaultRetryPolicy` retries connection errors up to 3 times with exponential backoff starting at 100ms.
+
+### Timeout Protection
+
+Wrap transports with timeout logic:
+
+```typescript
+import { withTimeout } from '@servicejs/transport';
+
+const timeoutTransport = withTimeout(networkTransport, {
+  timeout: 5000, // 5 second timeout
+  onTimeout: (envelope) => {
+    console.log(`Send to ${envelope.to} timed out`);
+  }
+});
+
+const result = await timeoutTransport.send(envelope);
+// Returns error if send exceeds timeout
+```
+
+### Combined Retry and Timeout
+
+For maximum reliability, combine both patterns:
+
+```typescript
+import { withRetryAndTimeout } from '@servicejs/transport';
+
+const reliableTransport = withRetryAndTimeout(
+  networkTransport,
+  {
+    // Retry policy
+    maxAttempts: 3,
+    initialDelay: 100,
+    maxDelay: 5000,
+    backoffMultiplier: 2
+  },
+  {
+    // Timeout policy
+    timeout: 5000
+  }
+);
+
+// Automatically retries timeouts and failures
+await reliableTransport.send(envelope);
+```
+
+**How it works:**
+
+1. Each send attempt has a timeout
+2. If timeout occurs, it's treated as a retryable error
+3. Retry with exponential backoff
+4. Continue until success or max attempts reached
+
+### Dynamic Routing
+
+Routes can be changed at runtime for failover scenarios:
+
+```typescript
+const router = createTransportRouter();
+
+let usePrimary = true;
+const routePredicate = (envelope) => true;
+
+// Set initial route
+router.addRoute(routePredicate, primaryTransport);
+
+// Later: fail over to secondary
+usePrimary = false;
+router.removeRoute(routePredicate);
+router.addRoute(routePredicate, secondaryTransport);
+```
+
+### Message-Type Routing
+
+Route based on message content:
+
+```typescript
+const router = createTransportRouter({ defaultTransport: localTransport });
+
+// Route compute tasks to worker
+router.addRoute(
+  (envelope) => envelope.message.type === 'compute',
+  workerTransport
+);
+
+// Route API calls to network
+router.addRoute(
+  (envelope) => envelope.message.type === 'api-request',
+  networkTransport
+);
+```
+
+### Utility Composition
+
+Utilities can be composed for complex behaviors:
+
+```typescript
+// Create base transport with timeout
+const timeoutTransport = withTimeout(networkTransport, { timeout: 5000 });
+
+// Add retry logic
+const reliableTransport = withRetry(timeoutTransport, {
+  maxAttempts: 3,
+  initialDelay: 100,
+  maxDelay: 5000,
+  backoffMultiplier: 2
+});
+
+// Add to router
+const router = createTransportRouter();
+router.addRoute(
+  (envelope) => envelope.to.startsWith('urn:api:'),
+  reliableTransport
+);
 ```
 
 ## Error Types

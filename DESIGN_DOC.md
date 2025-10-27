@@ -1,8 +1,8 @@
 # ServiceJS Design Document
 
 **Version:** 0.1.0
-**Status:** Milestones 0-3 Complete - HKT Foundation, Core Framework, Complete Mailboxes, Communication Patterns
-**Last Updated:** 2025-10-26
+**Status:** Milestones 0-7 Complete - HKT Foundation, Core Framework, Mailboxes, Communication Patterns, Lifecycle, Backpressure, Transports, Decorators
+**Last Updated:** 2025-10-27
 **Authors:** gfmio, Claude
 
 ---
@@ -207,10 +207,10 @@ Location transparency provides:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Developer Experience Layer                     │
+│                    Developer Experience Layer              [✅]  │
 │  @servicejs/decorators - Class-based components with decorators  │
 │  @servicejs/builder    - Fluent API for component creation       │
-│  @servicejs/di         - Dependency injection system       [✅]  │
+│  @servicejs/di         - Dependency injection via @Inject        │
 └─────────────────────────────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────────────────────────────────────┐
