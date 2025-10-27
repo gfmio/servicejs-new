@@ -4,11 +4,12 @@ Location-transparent transports for ServiceJS - local, worker, and network commu
 
 ## Features
 
-- **Three Transport Types**: Local (in-process), Worker (Web/Service Workers), Network (WebSocket)
+- **Five Transport Types**: Local (in-process), Worker (Web/Service Workers), TCP (Node.js), Shared Memory (high-performance), Network (WebSocket)
 - **Unified Interface**: Single API works across all transport types
 - **Message Envelope**: Standardized message format with routing metadata
 - **Serialization**: Pluggable serializers (JSON, structured clone)
 - **High Performance**: Lock-free shared memory and TCP transports for maximum throughput
+- **Message Framing**: Automatic message boundary handling for stream protocols (TCP)
 - **Request-Reply**: Built-in support via correlation IDs
 - **Auto-Reconnect**: Configurable automatic reconnection for network transports
 - **Transport Utilities**: Routing, retry logic, timeout protection, and composition
@@ -245,6 +246,86 @@ const transport = createNetworkTransport({
 
 await transport.connect();
 ```
+
+### createTCPTransport
+
+Create a TCP socket transport for high-performance Node.js network communication.
+
+```typescript
+function createTCPTransport(config: TCPTransportConfig): Transport
+```
+
+**Configuration:**
+
+```typescript
+interface TCPTransportConfig {
+  readonly localUrn: URN;
+  readonly host: string;
+  readonly port: number;
+  readonly serializer?: Serializer;
+  readonly connectionTimeout?: number;
+  readonly autoReconnect?: boolean;
+  readonly reconnectInterval?: number;
+  readonly maxReconnectAttempts?: number;
+  readonly keepAlive?: boolean;
+  readonly keepAliveDelay?: number;
+  readonly noDelay?: boolean;
+}
+```
+
+**Key Features:**
+
+- **Stream-Based**: Uses TCP sockets for reliable, ordered byte stream communication
+- **Message Framing**: Length-prefixed framing handles message boundaries
+- **High Performance**: Lower overhead than WebSocket, ideal for high-throughput scenarios
+- **TCP Options**: Configurable keep-alive, Nagle's algorithm (noDelay), and socket timeouts
+- **Auto-Reconnect**: Automatic reconnection on connection loss
+- **Node.js Only**: Uses Node.js `net` module (not available in browsers)
+
+**Example:**
+
+```typescript
+import { createTCPTransport } from '@servicejs/transport';
+
+const transport = createTCPTransport({
+  localUrn: 'urn:client:app',
+  host: 'localhost',
+  port: 8080,
+  autoReconnect: true,
+  noDelay: true, // Disable Nagle's algorithm for lower latency
+  keepAlive: true,
+});
+
+await transport.connect();
+
+transport.onReceive((envelope) => {
+  console.log('Received:', envelope.message);
+});
+
+await transport.send({
+  from: 'urn:client:app',
+  to: 'urn:server:api',
+  message: { type: 'request', data: 'hello' },
+});
+```
+
+**When to Use:**
+
+- Node.js server-to-server communication
+- High-throughput, low-latency messaging
+- Long-lived connections between services
+- Scenarios where WebSocket overhead is too high
+
+**Message Framing:**
+
+TCP is a byte stream protocol, so messages must be framed. This transport uses a simple 4-byte length-prefix framing:
+
+```
+[4 bytes: message length (big-endian)][message data]
+```
+
+This is transparent to users - the transport handles framing automatically.
+
 ### createSharedMemoryTransport
 
 Create a high-performance, lock-free transport using SharedArrayBuffer for inter-worker communication.
