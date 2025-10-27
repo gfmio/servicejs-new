@@ -139,6 +139,26 @@
         "typescript": "^5.7.0",
       },
     },
+    "packages/decorators": {
+      "name": "@servicejs/decorators",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/lifecycle": "workspace:*",
+        "@servicejs/mailbox": "workspace:*",
+        "@servicejs/result": "workspace:*",
+        "reflect-metadata": "^0.2.2",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.1.14",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+      "peerDependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+    },
     "packages/di": {
       "name": "@servicejs/di",
       "version": "0.1.0",
@@ -162,6 +182,19 @@
         "@types/bun": "latest",
         "tsup": "^8.0.0",
         "typescript": "^5.7.0",
+      },
+    },
+    "packages/flow-control": {
+      "name": "@servicejs/flow-control",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
       },
     },
     "packages/hkt": {
@@ -266,6 +299,19 @@
       "devDependencies": {
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",
+      },
+    },
+    "packages/lifecycle": {
+      "name": "@servicejs/lifecycle",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "tsup": "^8.0.1",
+        "typescript": "^5.3.3",
       },
     },
     "packages/mailbox": {
@@ -557,12 +603,42 @@
         "typescript": "^5.3.0",
       },
     },
+    "packages/supervision": {
+      "name": "@servicejs/supervision",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+      },
+    },
     "packages/these": {
       "name": "@servicejs/these",
       "version": "0.1.0",
       "devDependencies": {
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",
+      },
+    },
+    "packages/transport": {
+      "name": "@servicejs/transport",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.1.14",
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+      "peerDependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/result": "workspace:*",
       },
     },
     "packages/validation": {
@@ -1040,9 +1116,13 @@
 
     "@servicejs/core": ["@servicejs/core@workspace:packages/core"],
 
+    "@servicejs/decorators": ["@servicejs/decorators@workspace:packages/decorators"],
+
     "@servicejs/di": ["@servicejs/di@workspace:packages/di"],
 
     "@servicejs/either": ["@servicejs/either@workspace:packages/either"],
+
+    "@servicejs/flow-control": ["@servicejs/flow-control@workspace:packages/flow-control"],
 
     "@servicejs/hkt": ["@servicejs/hkt@workspace:packages/hkt"],
 
@@ -1061,6 +1141,8 @@
     "@servicejs/hkt-string": ["@servicejs/hkt-string@workspace:packages/hkt-string"],
 
     "@servicejs/hkt-tuple": ["@servicejs/hkt-tuple@workspace:packages/hkt-tuple"],
+
+    "@servicejs/lifecycle": ["@servicejs/lifecycle@workspace:packages/lifecycle"],
 
     "@servicejs/mailbox": ["@servicejs/mailbox@workspace:packages/mailbox"],
 
@@ -1098,7 +1180,11 @@
 
     "@servicejs/runtime-web-worker": ["@servicejs/runtime-web-worker@workspace:packages/runtime-web-worker"],
 
+    "@servicejs/supervision": ["@servicejs/supervision@workspace:packages/supervision"],
+
     "@servicejs/these": ["@servicejs/these@workspace:packages/these"],
+
+    "@servicejs/transport": ["@servicejs/transport@workspace:packages/transport"],
 
     "@servicejs/validation": ["@servicejs/validation@workspace:packages/validation"],
 
@@ -1874,6 +1960,8 @@
 
     "recast": ["recast@0.21.5", "", { "dependencies": { "ast-types": "0.15.2", "esprima": "~4.0.0", "source-map": "~0.6.1", "tslib": "^2.0.1" } }, "sha512-hjMmLaUXAm1hIuTqOdeYObMslq/q+Xff6QE3Y2P+uoHAg2nmVlLBps2hzh1UJDdMtDTMXOFewK6ky51JQIeECg=="],
 
+    "reflect-metadata": ["reflect-metadata@0.2.2", "", {}, "sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q=="],
+
     "regenerate": ["regenerate@1.4.2", "", {}, "sha512-zrceR/XhGYU/d/opr2EKO7aRHUeiBI8qjtfHqADTwZd6Szfy16la6kqD0MIUs5z5hx6AaKa+PixpPrR289+I0A=="],
 
     "regenerate-unicode-properties": ["regenerate-unicode-properties@10.2.2", "", { "dependencies": { "regenerate": "^1.4.2" } }, "sha512-m03P+zhBeQd1RGnYxrGyDAPpWX/epKirLrp8e3qevZdVkKtnCrjjWczIbYc8+xd6vcTStVlqfycTx1KR4LOr0g=="],
@@ -2166,7 +2254,13 @@
 
     "@servicejs/core/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
+    "@servicejs/decorators/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
+
     "@servicejs/di/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
+
+    "@servicejs/flow-control/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
+
+    "@servicejs/lifecycle/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
     "@servicejs/mailbox/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
@@ -2179,6 +2273,10 @@
     "@servicejs/result/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
     "@servicejs/runtime-bun/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
+
+    "@servicejs/supervision/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
+
+    "@servicejs/transport/@types/bun": ["@types/bun@1.3.1", "", { "dependencies": { "bun-types": "1.3.1" } }, "sha512-4jNMk2/K9YJtfqwoAa28c8wK+T7nvJFOjxI4h/7sORWcypRNxBpr+TPNaCfVWq70tLCJsqoFwcf0oI0JU/fvMQ=="],
 
     "@types/cacheable-request/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
@@ -2362,7 +2460,13 @@
 
     "@servicejs/core/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
 
+    "@servicejs/decorators/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
+
     "@servicejs/di/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
+
+    "@servicejs/flow-control/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
+
+    "@servicejs/lifecycle/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
 
     "@servicejs/mailbox/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
 
@@ -2375,6 +2479,10 @@
     "@servicejs/result/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
 
     "@servicejs/runtime-bun/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
+
+    "@servicejs/supervision/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
+
+    "@servicejs/transport/@types/bun/bun-types": ["bun-types@1.3.1", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-NMrcy7smratanWJ2mMXdpatalovtxVggkj11bScuWuiOoXTiKIu2eVS1/7qbyI/4yHedtsn175n4Sm4JcdHLXw=="],
 
     "@types/cacheable-request/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
@@ -2476,7 +2584,13 @@
 
     "@servicejs/core/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
+    "@servicejs/decorators/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
+
     "@servicejs/di/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
+
+    "@servicejs/flow-control/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
+
+    "@servicejs/lifecycle/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
     "@servicejs/mailbox/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
@@ -2489,6 +2603,10 @@
     "@servicejs/result/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
     "@servicejs/runtime-bun/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
+
+    "@servicejs/supervision/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
+
+    "@servicejs/transport/@types/bun/bun-types/@types/node": ["@types/node@24.9.1", "", { "dependencies": { "undici-types": "~7.16.0" } }, "sha512-QoiaXANRkSXK6p0Duvt56W208du4P9Uye9hWLWgGMDTEoKPhuenzNcC4vGUmrNkiOKTlIrBoyNQYNpSwfEZXSg=="],
 
     "cosmiconfig/js-yaml/argparse/sprintf-js": ["sprintf-js@1.0.3", "", {}, "sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g=="],
 
@@ -2520,7 +2638,13 @@
 
     "@servicejs/core/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
+    "@servicejs/decorators/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
     "@servicejs/di/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "@servicejs/flow-control/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "@servicejs/lifecycle/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "@servicejs/mailbox/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
@@ -2533,6 +2657,10 @@
     "@servicejs/result/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "@servicejs/runtime-bun/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "@servicejs/supervision/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "@servicejs/transport/@types/bun/bun-types/@types/node/undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "logkitty/yargs/find-up/locate-path/p-locate": ["p-locate@4.1.0", "", { "dependencies": { "p-limit": "^2.2.0" } }, "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A=="],
 
