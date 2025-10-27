@@ -76,9 +76,28 @@ export const allocateInMessage = (message: CapnpMessage, sizeInBytes: number): {
 
 /**
  * Allocate space in a segment (for single-segment operations)
+ * Automatically grows the segment if needed
  */
 export const allocate = (segment: CapnpSegment, sizeInBytes: number): number => {
   const offset = segment.position;
+  const requiredSize = segment.position + sizeInBytes;
+
+  // Check if we need to grow the segment
+  if (requiredSize > segment.data.byteLength) {
+    // Grow segment by 2x or required size, whichever is larger
+    const newSize = Math.max(segment.data.byteLength * 2, requiredSize + 1024);
+    const newBuffer = new ArrayBuffer(newSize);
+    const newData = new DataView(newBuffer);
+
+    // Copy existing data
+    const oldData = new Uint8Array(segment.data.buffer, 0, segment.position);
+    const newArray = new Uint8Array(newBuffer);
+    newArray.set(oldData);
+
+    // Replace segment data
+    segment.data = newData;
+  }
+
   segment.position += sizeInBytes;
   return offset;
 };

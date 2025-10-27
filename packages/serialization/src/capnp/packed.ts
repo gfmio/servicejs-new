@@ -12,39 +12,53 @@
  */
 
 /**
- * Pack a message using Cap'n Proto packed encoding
+ * Pack a message using Cap'n Proto packed encoding (optimized)
  *
  * @param data - Unpacked message data
  * @returns Packed message data
  */
 export const pack = (data: Uint8Array): Uint8Array => {
-  const result: number[] = [];
+  // Pre-allocate worst-case size (2x + overhead for tags)
+  const maxSize = data.length * 2;
+  const result = new Uint8Array(maxSize);
+  let resultPos = 0;
   let i = 0;
 
   while (i < data.length) {
     // Process 8-byte words
-    const wordStart = i;
     const wordEnd = Math.min(i + 8, data.length);
-    const word = data.slice(wordStart, wordEnd);
+    const wordSize = wordEnd - i;
 
-    // Pad word to 8 bytes if needed
-    while (word.length < 8) {
-      const padded = new Uint8Array(8);
-      padded.set(word);
-      word.set(padded);
+    // Fast path: check if word is all zeros or all 0xff
+    let allZero = true;
+    let allFF = true;
+    for (let j = i; j < wordEnd; j++) {
+      const byte = data[j]!;
+      if (byte !== 0) allZero = false;
+      if (byte !== 0xff) allFF = false;
+      if (!allZero && !allFF) break;
     }
 
-    // Check for special cases: all zeros or all 0xff
-    const allZero = word.every((b) => b === 0);
-    const allFF = word.every((b) => b === 0xff);
+    // Pad check for last word
+    const isFullWord = wordSize === 8;
+    if (!isFullWord && wordSize < 8) {
+      // For partial words, treat padding as zeros
+      allFF = false;
+    }
 
-    if (allZero) {
+    if (allZero && isFullWord) {
       // Count consecutive zero words
       let zeroCount = 1;
       let j = i + 8;
-      while (j < data.length && zeroCount < 255) {
-        const nextWord = data.slice(j, Math.min(j + 8, data.length));
-        if (nextWord.length === 8 && nextWord.every((b) => b === 0)) {
+      while (j + 7 < data.length && zeroCount < 255) {
+        let isZeroWord = true;
+        for (let k = j; k < j + 8; k++) {
+          if (data[k] !== 0) {
+            isZeroWord = false;
+            break;
+          }
+        }
+        if (isZeroWord) {
           zeroCount++;
           j += 8;
         } else {
@@ -53,15 +67,22 @@ export const pack = (data: Uint8Array): Uint8Array => {
       }
 
       // Write tag 0x00 followed by count
-      result.push(0x00, zeroCount);
+      result[resultPos++] = 0x00;
+      result[resultPos++] = zeroCount;
       i += zeroCount * 8;
-    } else if (allFF) {
+    } else if (allFF && isFullWord) {
       // Count consecutive 0xff words
       let ffCount = 1;
       let j = i + 8;
-      while (j < data.length && ffCount < 255) {
-        const nextWord = data.slice(j, Math.min(j + 8, data.length));
-        if (nextWord.length === 8 && nextWord.every((b) => b === 0xff)) {
+      while (j + 7 < data.length && ffCount < 255) {
+        let isFFWord = true;
+        for (let k = j; k < j + 8; k++) {
+          if (data[k] !== 0xff) {
+            isFFWord = false;
+            break;
+          }
+        }
+        if (isFFWord) {
           ffCount++;
           j += 8;
         } else {
@@ -70,38 +91,45 @@ export const pack = (data: Uint8Array): Uint8Array => {
       }
 
       // Write tag 0xff followed by count
-      result.push(0xff, ffCount);
+      result[resultPos++] = 0xff;
+      result[resultPos++] = ffCount;
       i += ffCount * 8;
     } else {
-      // Normal word: create tag byte
+      // Normal word: create tag byte and collect non-zero bytes
       let tag = 0;
-      const nonZeroBytes: number[] = [];
+      const nonZeroStart = resultPos + 1; // Reserve space for tag
+      let nonZeroPos = nonZeroStart;
 
       for (let j = 0; j < 8; j++) {
-        const byte = word[j];
-        if (byte !== undefined && byte !== 0) {
+        const byte = i + j < data.length ? data[i + j]! : 0;
+        if (byte !== 0) {
           tag |= 1 << j;
-          nonZeroBytes.push(byte);
+          result[nonZeroPos++] = byte;
         }
       }
 
-      // Write tag followed by non-zero bytes
-      result.push(tag, ...nonZeroBytes);
+      // Write tag
+      result[resultPos] = tag;
+      resultPos = nonZeroPos;
       i += 8;
     }
   }
 
-  return new Uint8Array(result);
+  // Return trimmed result
+  return result.subarray(0, resultPos);
 };
 
 /**
- * Unpack a message from Cap'n Proto packed encoding
+ * Unpack a message from Cap'n Proto packed encoding (optimized)
  *
  * @param data - Packed message data
  * @returns Unpacked message data
  */
 export const unpack = (data: Uint8Array): Uint8Array => {
-  const result: number[] = [];
+  // Estimate unpacked size (worst case: every tag represents 8 bytes)
+  const estimatedSize = data.length * 8;
+  const result = new Uint8Array(estimatedSize);
+  let resultPos = 0;
   let i = 0;
 
   while (i < data.length) {
@@ -117,9 +145,8 @@ export const unpack = (data: Uint8Array): Uint8Array => {
       if (count === undefined) {
         throw new Error('Packed encoding error: missing count');
       }
-      for (let j = 0; j < count * 8; j++) {
-        result.push(0);
-      }
+      // Fill zeros (already zero in Uint8Array, just advance position)
+      resultPos += count * 8;
     } else if (tag === 0xff) {
       // Run of 0xff words
       if (i >= data.length) {
@@ -129,8 +156,9 @@ export const unpack = (data: Uint8Array): Uint8Array => {
       if (count === undefined) {
         throw new Error('Packed encoding error: missing count');
       }
+      // Fill 0xff
       for (let j = 0; j < count * 8; j++) {
-        result.push(0xff);
+        result[resultPos++] = 0xff;
       }
     } else {
       // Normal word: tag indicates which bytes are non-zero
@@ -139,18 +167,17 @@ export const unpack = (data: Uint8Array): Uint8Array => {
           if (i >= data.length) {
             throw new Error('Packed encoding error: unexpected end of data');
           }
-          const byte = data[i++];
-          if (byte !== undefined) {
-            result.push(byte);
-          }
+          result[resultPos++] = data[i++]!;
         } else {
-          result.push(0);
+          // Zero byte (already zero, just advance)
+          resultPos++;
         }
       }
     }
   }
 
-  return new Uint8Array(result);
+  // Return trimmed result
+  return result.subarray(0, resultPos);
 };
 
 /**
