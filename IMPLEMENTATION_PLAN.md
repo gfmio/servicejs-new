@@ -2585,40 +2585,245 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ### 12.1 Framework Integrations
 
-- [ ] **Express.js integration**
+#### Node.js Server Support
+
+- [ ] **Node.js TCP server adapter**
+  - TCP server capability wrapper
+  - Connection handling as messages
+  - Backpressure support
+  - Notes: Low-level TCP server
+
+- [ ] **Node.js UDP server adapter**
+  - UDP server capability wrapper
+  - Datagram handling as messages
+  - Notes: UDP communication
+
+- [ ] **Node.js HTTP server adapter**
+  - HTTP server capability wrapper
+  - Request/response as messages
+  - Middleware support
+  - Notes: Plain Node.js HTTP
+
+- [ ] **Node.js HTTPS server adapter**
+  - HTTPS server with TLS
+  - Certificate management
+  - Notes: Secure HTTP
+
+- [ ] **Node.js HTTP/2 server adapter**
+  - HTTP/2 server support
+  - Stream multiplexing
+  - Server push
+  - Notes: Modern HTTP
+
+- [ ] **Node.js WebSocket server adapter**
+  - WebSocket server capability
+  - Connection lifecycle as messages
+  - Bidirectional communication
+  - Notes: Real-time communication
+
+#### Bun Server Support
+
+- [ ] **Bun TCP server adapter**
+  - Bun.serve TCP mode
+  - High-performance TCP
+  - Notes: Bun-optimized TCP
+
+- [ ] **Bun UDP server adapter**
+  - Bun UDP support
+  - Fast datagram handling
+  - Notes: Bun-optimized UDP
+
+- [ ] **Bun HTTP server adapter**
+  - Bun.serve HTTP mode
+  - Fast HTTP handling
+  - Notes: Bun-optimized HTTP
+
+- [ ] **Bun HTTPS server adapter**
+  - Bun.serve with TLS
+  - Certificate support
+  - Notes: Secure Bun HTTP
+
+- [ ] **Bun HTTP/2 server adapter**
+  - Bun HTTP/2 support
+  - Stream handling
+  - Notes: Bun HTTP/2
+
+- [ ] **Bun WebSocket server adapter**
+  - Bun.serve WebSocket mode
+  - High-performance WebSocket
+  - Notes: Bun-optimized WebSocket
+
+#### Cloudflare Platform Support
+
+- [ ] **Cloudflare Workers HTTP/fetch adapter**
+  - Request/Response handling
+  - Fetch event adapter
+  - Environment bindings
+  - Notes: Edge HTTP handling
+
+- [ ] **Cloudflare Durable Objects integration**
+  - DO lifecycle integration
+  - State persistence
+  - Alarm scheduling
+  - Notes: Stateful edge objects
+
+- [ ] **Cloudflare Workers RPC integration**
+  - RPC between workers
+  - Type-safe RPC calls
+  - Notes: Inter-worker communication
+
+- [ ] **Cloudflare Workers Scheduled Events**
+  - Cron trigger adapter
+  - Scheduled message dispatch
+  - Notes: Edge cron jobs
+
+- [ ] **Cloudflare Workers Queue integration**
+  - Queue consumer adapter
+  - Batch processing
+  - Notes: Edge message queues
+
+- [ ] **Cloudflare Pages Functions integration**
+  - Pages Functions adapter
+  - File-based routing
+  - Notes: Pages integration
+
+#### Deferred Framework Integrations
+
+- [ ] **Express.js integration** (DEFERRED)
   - HTTP to message adapter
   - Request/reply via HTTP
-  - Notes: REST API
+  - Notes: REST API framework
 
-- [ ] **Fastify integration**
+- [ ] **Fastify integration** (DEFERRED)
   - HTTP to message adapter
   - WebSocket support
-  - Notes: Alternative to Express
+  - Notes: Fast web framework
 
-- [ ] **Next.js integration**
+- [ ] **Next.js integration** (DEFERRED)
   - Server components
   - API routes
-  - Notes: React integration
+  - Notes: React framework
 
-- [ ] **Hono integration**
+- [ ] **Hono integration** (DEFERRED)
   - Edge runtime support
   - Notes: Modern web framework
 
+#### Deferred RPC/Protocol Integrations
+
+- [ ] **Apache Thrift integration** (DEFERRED)
+  - Thrift IDL support
+  - Code generation
+  - Cross-language RPC
+  - Notes: Multi-language RPC
+
+- [ ] **gRPC integration** (DEFERRED)
+  - Protocol Buffers support
+  - HTTP/2 streaming
+  - Service definitions
+  - Notes: Modern RPC framework
+
+- [ ] **Cap'n Proto RPC integration** (DEFERRED)
+  - Cap'n Proto RPC protocol
+  - Zero-copy serialization
+  - Promise pipelining
+  - Notes: High-performance RPC
+
 ### 12.2 Database Integrations
 
+#### SQLite Support
+
+- [ ] **SQLite adapter for Node.js**
+  - better-sqlite3 integration
+  - Synchronous queries as messages
+  - Transaction support
+  - Notes: Fast embedded SQL (Node.js)
+
+- [ ] **SQLite adapter for Bun**
+  - Bun.SQLite integration
+  - Native Bun SQL support
+  - High-performance queries
+  - Notes: Fast embedded SQL (Bun)
+
+- [ ] **Cloudflare D1 adapter**
+  - D1 database integration
+  - SQL operations as messages
+  - Edge database queries
+  - Notes: Cloudflare edge SQL
+
+#### PostgreSQL Support
+
 - [ ] **PostgreSQL adapter**
-  - Database operations as messages
+  - pg/node-postgres integration
   - Connection pooling
-  - Notes: Relational DB
+  - Prepared statements
+  - Transaction support
+  - Notes: Production relational DB
+
+#### Key-Value and Cache Stores
 
 - [ ] **Redis adapter**
   - Cache operations as messages
   - Pub/sub via Redis
+  - Connection pooling
+  - Pipeline support
   - Notes: Cache and messaging
+
+- [ ] **Memcached adapter**
+  - Cache operations as messages
+  - Binary protocol support
+  - Connection pooling
+  - Notes: Distributed cache
+
+#### Multi-Model Databases
+
+- [ ] **SurrealDB adapter**
+  - Multi-model operations as messages
+  - Graph, document, key-value support
+  - Real-time subscriptions
+  - Notes: Modern multi-model DB
 
 - [ ] **MongoDB adapter**
   - Document operations as messages
-  - Notes: Document DB
+  - Change streams support
+  - Connection pooling
+  - Notes: Document database
+
+#### Deferred Database Integrations
+
+- [ ] **MySQL/MariaDB adapter** (DEFERRED)
+  - SQL operations as messages
+  - Connection pooling
+  - Notes: Popular relational DB
+
+- [ ] **CockroachDB adapter** (DEFERRED)
+  - Distributed SQL
+  - PostgreSQL wire protocol
+  - Notes: Distributed relational DB
+
+- [ ] **Cassandra adapter** (DEFERRED)
+  - Wide-column operations
+  - Distributed queries
+  - Notes: Wide-column store
+
+- [ ] **Neo4j adapter** (DEFERRED)
+  - Graph queries as messages
+  - Cypher query language
+  - Notes: Graph database
+
+- [ ] **DynamoDB adapter** (DEFERRED)
+  - AWS DynamoDB operations
+  - Key-value and document support
+  - Notes: AWS NoSQL
+
+- [ ] **ClickHouse adapter** (DEFERRED)
+  - Column-oriented analytics
+  - Real-time queries
+  - Notes: Analytics database
+
+- [ ] **TimescaleDB adapter** (DEFERRED)
+  - Time-series operations
+  - PostgreSQL extension
+  - Notes: Time-series database
 
 ### 12.3 Message Queue Integrations
 
