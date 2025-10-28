@@ -7,7 +7,7 @@ import { err, ok } from '@servicejs/result';
 import { createClient, type ClickHouseClient } from '@clickhouse/client';
 
 export interface ClickHouseConfig {
-  url: string;
+  host: string;
   username?: string;
   password?: string;
   database?: string;
@@ -31,16 +31,17 @@ export interface DatabaseAdapter {
   health(): Promise<Result<{ status: 'healthy' | 'degraded' | 'unhealthy'; error?: Error }, Error>>;
   query<TRow = unknown>(query: DatabaseQuery): Promise<Result<DatabaseResult<TRow>, Error>>;
   insert(table: string, values: Record<string, unknown>[]): Promise<Result<void, Error>>;
+  insertMany(table: string, values: Record<string, unknown>[]): Promise<Result<void, Error>>;
 }
 
 export const createClickHouseAdapter = (): DatabaseAdapter => {
   let client: ClickHouseClient | null = null;
 
-  return {
+  const adapter = {
     init: async (config: ClickHouseConfig): Promise<Result<void, Error>> => {
       try {
         client = createClient({
-          url: config.url,
+          url: config.host,
           username: config.username,
           password: config.password,
           database: config.database,
@@ -121,5 +122,12 @@ export const createClickHouseAdapter = (): DatabaseAdapter => {
         return err(error instanceof Error ? error : new Error(String(error)));
       }
     },
+
+    insertMany: async (table: string, values: Record<string, unknown>[]): Promise<Result<void, Error>> => {
+      // insertMany is an alias for insert in ClickHouse
+      return await adapter.insert(table, values);
+    },
   };
+
+  return adapter;
 };
