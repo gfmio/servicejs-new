@@ -153,3 +153,27 @@ export {
 // Mock transport
 export type { MockTransport, CapturedMessage, MessagePredicate } from './mock-transport.js';
 export { createMockTransport, TransportAssertionError } from './mock-transport.js';
+
+// Deterministic time
+export type { TimeProvider, ControllableTime } from './deterministic-time.js';
+export {
+  createControllableTime,
+  createRealTime,
+  createObservabilityWithTime,
+  createTestScenario,
+  waitControlled,
+  measureWithTime,
+} from './deterministic-time.js';
+
+// Built-in instrumentation
+export type {
+  ComponentInstrumentationConfig,
+  MailboxMetrics,
+  TransportMetrics,
+} from './instrumentation.js';
+export {
+  instrumentComponent,
+  createMailboxMetrics,
+  createTransportMetrics,
+  instrumentFunction,
+} from './instrumentation.js';
