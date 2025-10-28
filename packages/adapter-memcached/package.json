@@ -1,0 +1,41 @@
+{
+  "name": "@servicejs/adapter-memcached",
+  "version": "0.1.0",
+  "description": "Memcached cache adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "memjs": "^1.3.2"
+  },
+  "devDependencies": {
+    "@types/memjs": "^1.3.2",
+    "testcontainers": "^10.18.0",
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "memcached",
+    "cache"
+  ]
+}
