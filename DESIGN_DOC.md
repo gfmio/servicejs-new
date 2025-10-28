@@ -1,7 +1,7 @@
 # ServiceJS Design Document
 
 **Version:** 0.1.0
-**Status:** Milestones 0-7 Complete + Serialization (10.2) - HKT Foundation, Core Framework, Mailboxes, Communication Patterns, Lifecycle, Backpressure, Transports, Decorators, Serialization
+**Status:** Milestones 0-8 Complete + CAS (10.1) + Security (10.3) + Performance (10.4) + Documentation (10.5-10.6) - HKT Foundation, Core Framework, Mailboxes, Communication Patterns, Lifecycle, Backpressure, Transports, Decorators, Schema Validation, CAS, Security, Serialization, Performance, Documentation
 **Last Updated:** 2025-10-28
 **Authors:** gfmio, Claude
 
