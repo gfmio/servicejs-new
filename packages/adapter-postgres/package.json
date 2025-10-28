@@ -1,0 +1,43 @@
+{
+  "name": "@servicejs/adapter-postgres",
+  "version": "0.1.0",
+  "description": "PostgreSQL adapter for ServiceJS integration framework",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "postgres",
+    "postgresql",
+    "database",
+    "integration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/integration-database": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.10.9",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@servicejs/result": "workspace:*"
+  }
+}
