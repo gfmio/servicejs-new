@@ -1,0 +1,19 @@
+{
+  "name": "@servicejs/benchmarks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "bun run benchmarks/mailbox.bench.ts && bun run benchmarks/result.bench.ts && bun run benchmarks/cas.bench.ts",
+    "bench:mailbox": "bun run benchmarks/mailbox.bench.ts",
+    "bench:result": "bun run benchmarks/result.bench.ts",
+    "bench:cas": "bun run benchmarks/cas.bench.ts",
+    "bench:security": "bun run benchmarks/security.bench.ts"
+  },
+  "dependencies": {
+    "@servicejs/mailbox": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/cas": "workspace:*",
+    "@servicejs/security": "workspace:*"
+  }
+}
