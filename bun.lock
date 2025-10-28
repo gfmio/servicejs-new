@@ -312,6 +312,56 @@
         "typescript": "^5.3.0",
       },
     },
+    "packages/integration-database": {
+      "name": "@servicejs/integration-database",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/integrations": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
+    "packages/integration-mq": {
+      "name": "@servicejs/integration-mq",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/integrations": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
+    "packages/integration-server": {
+      "name": "@servicejs/integration-server",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/integrations": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
+    "packages/integrations": {
+      "name": "@servicejs/integrations",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/core": "workspace:*",
+        "@servicejs/either": "workspace:*",
+        "@servicejs/option": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
     "packages/lifecycle": {
       "name": "@servicejs/lifecycle",
       "version": "0.1.0",
@@ -1216,6 +1266,14 @@
     "@servicejs/hkt-string": ["@servicejs/hkt-string@workspace:packages/hkt-string"],
 
     "@servicejs/hkt-tuple": ["@servicejs/hkt-tuple@workspace:packages/hkt-tuple"],
+
+    "@servicejs/integration-database": ["@servicejs/integration-database@workspace:packages/integration-database"],
+
+    "@servicejs/integration-mq": ["@servicejs/integration-mq@workspace:packages/integration-mq"],
+
+    "@servicejs/integration-server": ["@servicejs/integration-server@workspace:packages/integration-server"],
+
+    "@servicejs/integrations": ["@servicejs/integrations@workspace:packages/integrations"],
 
     "@servicejs/lifecycle": ["@servicejs/lifecycle@workspace:packages/lifecycle"],
 
