@@ -42,3 +42,24 @@ export {
   isCommand,
   isQuery,
 } from './cqrs.js';
+
+// Event Sourcing
+export type {
+  Event,
+  EventMetadata,
+  EventStore,
+  Snapshot,
+  SnapshotStore,
+  Projection,
+} from './event-sourcing.js';
+
+export {
+  createInMemoryEventStore,
+  createInMemorySnapshotStore,
+  replayEvents,
+  rebuildFromEventStore,
+  rebuildWithSnapshot,
+  buildProjection,
+  createEvent,
+  createSnapshot,
+} from './event-sourcing.js';
