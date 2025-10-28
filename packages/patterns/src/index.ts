@@ -63,3 +63,22 @@ export {
   createEvent,
   createSnapshot,
 } from './event-sourcing.js';
+
+// Actor Mobility
+export type {
+  SerializedState,
+  SerializedStateMetadata,
+  MobileComponent,
+  MobileComponentFactory,
+  MigrationManager,
+  MigrationHandle,
+  MigrationStatus,
+} from './mobility.js';
+
+export {
+  createSerializedState,
+  validateSerializedState,
+  cloneSerializedState,
+  createInMemoryMigrationManager,
+  createMobileComponentFactory,
+} from './mobility.js';
