@@ -191,7 +191,14 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
 
     try {
       const producer: Producer = kafka.producer();
-      await producer.connect();
+      const admin = kafka.admin();
+
+      await Promise.all([
+        producer.connect(),
+        admin.connect(),
+      ]);
+
+      const createdTopics = new Set<string>();
 
       const queueProducer: QueueProducer = {
         publish: async <T = unknown>(
@@ -200,6 +207,26 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
           options?: { attributes?: Map<string, string> }
         ): Promise<Result<string, Error>> => {
           try {
+            // Ensure topic exists (create if needed)
+            if (!createdTopics.has(topic)) {
+              try {
+                const topics = await admin.listTopics();
+                if (!topics.includes(topic)) {
+                  await admin.createTopics({
+                    topics: [{
+                      topic,
+                      numPartitions: 1,
+                      replicationFactor: 1,
+                    }],
+                  });
+                }
+                createdTopics.add(topic);
+              } catch (createError) {
+                // Topic might already exist (race condition), ignore error
+                createdTopics.add(topic);
+              }
+            }
+
             // Build headers from attributes
             const headers: Record<string, string> = {};
             if (options?.attributes) {
@@ -234,7 +261,10 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
 
         close: async (): Promise<Result<void, Error>> => {
           try {
-            await producer.disconnect();
+            await Promise.all([
+              producer.disconnect(),
+              admin.disconnect(),
+            ]);
             return ok(undefined);
           } catch (error) {
             return err(error instanceof Error ? error : new Error(String(error)));
@@ -268,6 +298,8 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
 
       const consumerId = `consumer_${Date.now()}_${Math.random().toString(36).substring(7)}`;
       const subscriptions = new Set<string>();
+      const handlers = new Map<string, (message: QueueMessage<any>) => Promise<void>>();
+      let isRunning = false;
 
       const queueConsumer: QueueConsumer = {
         id: consumerId,
@@ -277,76 +309,100 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
           handler: (message: QueueMessage<T>) => Promise<void>
         ): Promise<Result<void, Error>> => {
           try {
-            // Subscribe to topic
+            // Check if already subscribed
+            if (subscriptions.has(topic)) {
+              return err(new Error(`Already subscribed to topic: ${topic}`));
+            }
+
+            // Store handler for this topic BEFORE subscribing
+            handlers.set(topic, handler as (message: QueueMessage<any>) => Promise<void>);
+            subscriptions.add(topic);
+
+            // Subscribe to topic (fromBeginning: false to only get new messages)
             await consumer.subscribe({ topic, fromBeginning: false });
 
-            // Run consumer
-            await consumer.run({
-              eachMessage: async ({ message }) => {
-                try {
-                  // Parse message data
-                  const data = message.value ? JSON.parse(message.value.toString()) as T : null;
+            // Start consumer.run() after first subscription
+            if (!isRunning) {
+              isRunning = true;
 
-                  // Build attributes from headers
-                  const attributes = new Map<string, string>();
-                  if (message.headers) {
-                    for (const [key, value] of Object.entries(message.headers)) {
-                      if (value !== null && value !== undefined) {
-                        attributes.set(key, value.toString());
+              // Start consumer (only called once)
+              consumer.run({
+                eachMessage: async ({ topic: msgTopic, message }) => {
+                  try {
+                    // Get the handler for this topic
+                    const topicHandler = handlers.get(msgTopic);
+                    if (!topicHandler) {
+                      // This can happen if message arrives before handler is registered
+                      // or after unsubscribe - just skip it
+                      return;
+                    }
+
+                    // Parse message data
+                    const data = message.value ? JSON.parse(message.value.toString()) : null;
+
+                    // Build attributes from headers
+                    const attributes = new Map<string, string>();
+                    if (message.headers) {
+                      for (const [key, value] of Object.entries(message.headers)) {
+                        if (value !== null && value !== undefined) {
+                          attributes.set(key, value.toString());
+                        }
                       }
                     }
+
+                    // Create message object
+                    let acknowledged = false;
+
+                    const queueMessage: QueueMessage<any> = {
+                      id: message.key?.toString() || `${Date.now()}-${Math.random()}`,
+                      data,
+                      attributes,
+                      timestamp: message.timestamp ? parseInt(message.timestamp, 10) : Date.now(),
+
+                      ack: async (): Promise<Result<void, Error>> => {
+                        if (acknowledged) {
+                          return err(new Error('Message already acknowledged'));
+                        }
+
+                        try {
+                          // Kafka auto-commits offsets, so we just mark as acknowledged
+                          acknowledged = true;
+                          return ok(undefined);
+                        } catch (error) {
+                          return err(error instanceof Error ? error : new Error(String(error)));
+                        }
+                      },
+
+                      nack: async (): Promise<Result<void, Error>> => {
+                        if (acknowledged) {
+                          return err(new Error('Message already acknowledged'));
+                        }
+
+                        try {
+                          // For Kafka, nack means we don't commit the offset
+                          // The message will be reprocessed on restart
+                          acknowledged = true;
+                          return ok(undefined);
+                        } catch (error) {
+                          return err(error instanceof Error ? error : new Error(String(error)));
+                        }
+                      },
+                    };
+
+                    // Call handler for this topic
+                    await topicHandler(queueMessage);
+                  } catch (error) {
+                    console.error('Error processing Kafka message:', error);
                   }
+                },
+              });
+            }
 
-                  // Create message object
-                  let acknowledged = false;
-
-                  const queueMessage: QueueMessage<T> = {
-                    id: message.key?.toString() || `${Date.now()}-${Math.random()}`,
-                    data: data as T,
-                    attributes,
-                    timestamp: message.timestamp ? parseInt(message.timestamp, 10) : Date.now(),
-
-                    ack: async (): Promise<Result<void, Error>> => {
-                      if (acknowledged) {
-                        return err(new Error('Message already acknowledged'));
-                      }
-
-                      try {
-                        // Kafka auto-commits offsets, so we just mark as acknowledged
-                        acknowledged = true;
-                        return ok(undefined);
-                      } catch (error) {
-                        return err(error instanceof Error ? error : new Error(String(error)));
-                      }
-                    },
-
-                    nack: async (): Promise<Result<void, Error>> => {
-                      if (acknowledged) {
-                        return err(new Error('Message already acknowledged'));
-                      }
-
-                      try {
-                        // For Kafka, nack means we don't commit the offset
-                        // The message will be reprocessed on restart
-                        acknowledged = true;
-                        return ok(undefined);
-                      } catch (error) {
-                        return err(error instanceof Error ? error : new Error(String(error)));
-                      }
-                    },
-                  };
-
-                  // Call handler
-                  await handler(queueMessage);
-                } catch (error) {
-                  console.error('Error processing Kafka message:', error);
-                }
-              },
-            });
-
-            subscriptions.add(topic);
             return ok(undefined);
           } catch (error) {
+            // Clean up on error
+            handlers.delete(topic);
+            subscriptions.delete(topic);
             return err(error instanceof Error ? error : new Error(String(error)));
           }
         },
@@ -360,6 +416,7 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
             // Kafka doesn't have a direct unsubscribe for individual topics
             // We would need to restart the consumer with different subscriptions
             subscriptions.delete(topic);
+            handlers.delete(topic);
             return ok(undefined);
           } catch (error) {
             return err(error instanceof Error ? error : new Error(String(error)));
@@ -370,6 +427,8 @@ export const createKafkaAdapter = (): MessageQueueAdapter => {
           try {
             await consumer.disconnect();
             subscriptions.clear();
+            handlers.clear();
+            isRunning = false;
             return ok(undefined);
           } catch (error) {
             return err(error instanceof Error ? error : new Error(String(error)));
