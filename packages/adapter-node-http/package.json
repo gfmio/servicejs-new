@@ -1,0 +1,42 @@
+{
+  "name": "@servicejs/adapter-node-http",
+  "version": "0.1.0",
+  "description": "Node.js HTTP adapter for ServiceJS integration framework",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "http",
+    "nodejs",
+    "server",
+    "integration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/integration-server": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@servicejs/result": "workspace:*"
+  }
+}
