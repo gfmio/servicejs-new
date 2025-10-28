@@ -1,0 +1,43 @@
+{
+  "name": "@servicejs/integrations",
+  "version": "0.1.0",
+  "description": "Base integration framework for ServiceJS - lifecycle management and health monitoring",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/core": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*",
+    "@servicejs/either": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": [
+    "servicejs",
+    "integrations",
+    "adapters",
+    "framework",
+    "database",
+    "message-queue"
+  ]
+}
