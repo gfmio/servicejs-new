@@ -1,0 +1,44 @@
+{
+  "name": "@servicejs/adapter-node-sqlite",
+  "version": "0.1.0",
+  "description": "SQLite database adapter for ServiceJS using better-sqlite3",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "NODE_OPTIONS='--loader tsx' node --test tests/**/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/integration-database": "workspace:*",
+    "@servicejs/integrations": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "better-sqlite3": "^11.8.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "sqlite",
+    "database",
+    "node",
+    "better-sqlite3"
+  ]
+}
