@@ -1,0 +1,41 @@
+{
+  "name": "@servicejs/adapter-bun-http",
+  "version": "0.1.0",
+  "description": "Bun HTTP server adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/integration-server": "workspace:*",
+    "@servicejs/integrations": "workspace:*",
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "bun",
+    "http",
+    "server"
+  ]
+}
