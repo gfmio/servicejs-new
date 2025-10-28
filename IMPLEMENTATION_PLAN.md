@@ -1995,9 +1995,11 @@ This document outlines the complete implementation plan for ServiceJS, organized
 ### Milestone 8 Summary
 
 **Package Implemented:**
+
 - @servicejs/validation - Complete validation and schema validation system
 
 **Features:**
+
 - Validation type with error accumulation (similar to Either but collects all errors)
 - MessageSchema interface for runtime validation
 - Zod integration with type-safe wrappers
@@ -2006,12 +2008,14 @@ This document outlines the complete implementation plan for ServiceJS, organized
 - Full Result-based API (never throws)
 
 **Test Coverage:**
+
 - Validation tests: 88 tests passing ✅
 - Zod integration: Comprehensive test coverage ✅
 - Capability validation: Full test coverage ✅
 - Schema registry: Complete tests ✅
 
 **Documentation:**
+
 - Complete README.md with API reference ✅
 - Validation type guide with examples ✅
 - Zod integration guide ✅
@@ -2465,6 +2469,7 @@ This document outlines the complete implementation plan for ServiceJS, organized
 **Status:** ✅ **Complete** - All core observability features implemented and tested
 
 **Package Implemented:**
+
 - @servicejs/observability - Complete events-based observability system
 
 **Implementation Summary:**
@@ -2472,6 +2477,7 @@ This document outlines the complete implementation plan for ServiceJS, organized
 All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Instrumentation) and section 9.7 deterministic time testing which were previously deferred.
 
 **Philosophy:**
+
 - Everything is events/messages
 - Framework-agnostic (not tied to OTel/Prometheus/etc.)
 - Adapters translate events to backend formats
@@ -2480,6 +2486,7 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 - Testing-first with mock implementations
 
 **Features Delivered:**
+
 - ✅ Unified event schema (SpanStart, SpanEnd, Metric, Log, Custom events)
 - ✅ Trace context propagation (W3C Trace Context compatible)
 - ✅ Resource attributes for service identification
@@ -2502,6 +2509,7 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 - ✅ Zero-overhead no-op mode for production
 
 **Test Coverage:**
+
 - **205 tests passing** across 10 test files
 - Event types and schema: ✅
 - Capability interface: 16 tests ✅
@@ -2515,16 +2523,19 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 - **461 expect() assertions**
 
 **Documentation:**
+
 - Complete JSDoc comments on all public APIs ✅
 - Type definitions with full TypeScript support ✅
 - 5 runnable examples with comprehensive README ✅
 - Examples cover: basic usage, multi-backend, distributed tracing, testing, auto-instrumentation ✅
 
 **Previously Deferred (Now Complete):**
+
 - ✅ Section 9.8: Built-in instrumentation for components, mailboxes, and transports - COMPLETED
 - ✅ Deterministic time for testing - COMPLETED (standalone implementation, no external dependencies)
 
 **Package Structure:**
+
 - @servicejs/observability - Complete implementation with all features
 
 ---
@@ -3081,27 +3092,28 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 #### SQLite Support
 
-- [ ] **SQLite adapter for Node.js**
+- [x] **SQLite adapter for Node.js** ✅
   - better-sqlite3 integration
   - Synchronous queries as messages
   - Transaction support
   - Notes: Fast embedded SQL (Node.js)
 
-- [ ] **SQLite adapter for Bun**
+- [x] **SQLite adapter for Bun**
   - Bun.SQLite integration
   - Native Bun SQL support
   - High-performance queries
   - Notes: Fast embedded SQL (Bun)
 
-- [ ] **Cloudflare D1 adapter**
+- [x] **Cloudflare D1 adapter** ✅
   - D1 database integration
   - SQL operations as messages
   - Edge database queries
+  - Miniflare/Vitest Workers test environment
   - Notes: Cloudflare edge SQL
 
 #### PostgreSQL Support
 
-- [ ] **PostgreSQL adapter**
+- [x] **PostgreSQL adapter**
   - pg/node-postgres integration
   - Connection pooling
   - Prepared statements
@@ -3110,18 +3122,26 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 #### Key-Value and Cache Stores
 
-- [ ] **Redis adapter**
+- [x] **Redis adapter** ✅
   - Cache operations as messages
   - Pub/sub via Redis
   - Connection pooling
   - Pipeline support
+  - Testcontainers integration
   - Notes: Cache and messaging
 
-- [ ] **Memcached adapter**
+- [x] **Memcached adapter** ✅
   - Cache operations as messages
-  - Binary protocol support
-  - Connection pooling
+  - memjs client integration
+  - Testcontainers integration
   - Notes: Distributed cache
+
+- [x] **Cloudflare KV adapter** ✅
+  - KV namespace operations
+  - TTL support
+  - Prefix-based operations
+  - Miniflare/Vitest Workers test environment
+  - Notes: Edge key-value store
 
 #### Multi-Model Databases
 
@@ -3137,41 +3157,52 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - Connection pooling
   - Notes: Document database
 
-#### Deferred Database Integrations
+#### Additional Database Integrations
 
-- [ ] **MySQL/MariaDB adapter** (DEFERRED)
+- [ ] **MySQL/MariaDB adapter**
   - SQL operations as messages
   - Connection pooling
+  - Transaction support
+  - Testcontainers integration
   - Notes: Popular relational DB
 
-- [ ] **CockroachDB adapter** (DEFERRED)
+- [ ] **CockroachDB adapter**
   - Distributed SQL
   - PostgreSQL wire protocol
+  - Connection pooling
+  - Testcontainers integration
   - Notes: Distributed relational DB
 
-- [ ] **Cassandra adapter** (DEFERRED)
+- [ ] **Cassandra adapter**
   - Wide-column operations
   - Distributed queries
+  - Connection pooling
+  - Testcontainers integration
   - Notes: Wide-column store
 
-- [ ] **Neo4j adapter** (DEFERRED)
+- [ ] **Neo4j adapter**
   - Graph queries as messages
   - Cypher query language
+  - Connection pooling
+  - Testcontainers integration
   - Notes: Graph database
 
-- [ ] **DynamoDB adapter** (DEFERRED)
+- [ ] **DynamoDB adapter**
   - AWS DynamoDB operations
   - Key-value and document support
+  - DynamoDB Local for testing
   - Notes: AWS NoSQL
 
-- [ ] **ClickHouse adapter** (DEFERRED)
+- [ ] **ClickHouse adapter**
   - Column-oriented analytics
   - Real-time queries
+  - Testcontainers integration
   - Notes: Analytics database
 
-- [ ] **TimescaleDB adapter** (DEFERRED)
+- [ ] **TimescaleDB adapter**
   - Time-series operations
   - PostgreSQL extension
+  - Testcontainers integration
   - Notes: Time-series database
 
 ### 12.3 Message Queue Integrations
@@ -3180,22 +3211,63 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 **Note**: Specific queue implementations to be added as needed
 
-- [ ] **RabbitMQ transport**
+- [x] **RabbitMQ adapter** ✅
   - AMQP protocol
   - Queue-based messaging
+  - Testcontainers integration
   - Notes: Message broker
 
-- [ ] **Kafka transport**
+- [x] **Kafka adapter** ✅
   - Event streaming
   - Topic-based messaging
+  - Consumer groups
+  - Testcontainers integration
   - Notes: Event log
 
-- [ ] **NATS transport**
+- [x] **NATS adapter** ✅
   - Lightweight messaging
   - Subject-based routing
+  - Wildcard subscriptions
+  - Request-reply pattern
+  - Testcontainers integration
   - Notes: Cloud-native messaging
 
-### 12.4 Observability Integrations
+- [x] **Cloudflare Queues adapter** ✅
+  - Producer/consumer pattern
+  - Batch operations
+  - Delayed messages
+  - Miniflare/Vitest Workers test environment
+  - Notes: Edge message queue
+
+- [ ] **Apache Pulsar adapter**
+  - Multi-tenant messaging
+  - Topic-based pub/sub
+  - Geo-replication
+  - Testcontainers integration
+  - Notes: Unified messaging and streaming
+
+### 12.4 Object Storage Integrations
+
+**Status**: Not Started
+
+**Note**: Cloud object storage adapters for files and blobs
+
+- [ ] **Amazon S3 adapter**
+  - S3 bucket operations
+  - Object upload/download
+  - Multipart uploads
+  - Presigned URLs
+  - LocalStack for testing
+  - Notes: AWS object storage
+
+- [ ] **Cloudflare R2 adapter**
+  - R2 bucket operations
+  - S3-compatible API
+  - Object operations
+  - Miniflare/Vitest Workers test environment
+  - Notes: Edge object storage
+
+### 12.5 Observability Integrations
 
 - [ ] **OpenTelemetry integration**
   - Full tracing support
@@ -3210,7 +3282,7 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - Pre-built dashboards
   - Notes: Visualization
 
-### 12.5 DevTools
+### 12.6 DevTools
 
 - [ ] **VS Code extension**
   - Component visualization
