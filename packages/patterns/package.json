@@ -1,0 +1,45 @@
+{
+  "name": "@servicejs/patterns",
+  "version": "0.1.0",
+  "description": "Advanced architectural patterns for ServiceJS (Saga, CQRS, Event Sourcing)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/core": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*",
+    "@servicejs/either": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "keywords": [
+    "servicejs",
+    "patterns",
+    "saga",
+    "cqrs",
+    "event-sourcing",
+    "distributed-transactions"
+  ],
+  "author": "",
+  "license": "MIT"
+}
