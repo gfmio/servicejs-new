@@ -23,3 +23,9 @@ export type {
 export {
   createMessageQueueAdapter,
 } from './message-queue.js';
+
+// Examples
+export {
+  createSimpleMQAdapter,
+  exampleMQUsage,
+} from './examples/mq-simple.js';
