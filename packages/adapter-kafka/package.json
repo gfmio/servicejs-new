@@ -1,0 +1,42 @@
+{
+  "name": "@servicejs/adapter-kafka",
+  "version": "0.1.0",
+  "description": "Kafka adapter for ServiceJS integration framework",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "kafka",
+    "message-queue",
+    "integration",
+    "streaming"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/integration-mq": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@servicejs/result": "workspace:*"
+  }
+}

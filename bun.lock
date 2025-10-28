@@ -40,6 +40,22 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/adapter-kafka": {
+      "name": "@servicejs/adapter-kafka",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/integration-mq": "workspace:*",
+        "@servicejs/result": "workspace:*",
+        "kafkajs": "^2.2.4",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.1",
+        "typescript": "^5.3.3",
+      },
+      "peerDependencies": {
+        "@servicejs/result": "workspace:*",
+      },
+    },
     "packages/adapter-node-http": {
       "name": "@servicejs/adapter-node-http",
       "version": "0.1.0",
@@ -1317,6 +1333,8 @@
 
     "@servicejs/adapter-bun-sqlite": ["@servicejs/adapter-bun-sqlite@workspace:packages/adapter-bun-sqlite"],
 
+    "@servicejs/adapter-kafka": ["@servicejs/adapter-kafka@workspace:packages/adapter-kafka"],
+
     "@servicejs/adapter-node-http": ["@servicejs/adapter-node-http@workspace:packages/adapter-node-http"],
 
     "@servicejs/adapter-postgres": ["@servicejs/adapter-postgres@workspace:packages/adapter-postgres"],
@@ -1968,6 +1986,8 @@
     "jsonc-parser": ["jsonc-parser@3.3.1", "", {}, "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ=="],
 
     "jsonfile": ["jsonfile@4.0.0", "", { "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg=="],
+
+    "kafkajs": ["kafkajs@2.2.4", "", {}, "sha512-j/YeapB1vfPT2iOIUn/vxdyKEuhuY2PxMBvf5JWux6iSaukAccrMtXEY/Lb7OvavDhOWME589bpLrEdnVHjfjA=="],
 
     "keyv": ["keyv@4.5.4", "", { "dependencies": { "json-buffer": "3.0.1" } }, "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw=="],
 
