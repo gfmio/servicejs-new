@@ -107,6 +107,17 @@
         "typescript": "^5.3.0",
       },
     },
+    "packages/cas": {
+      "name": "@servicejs/cas",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+      },
+    },
     "packages/config": {
       "name": "@servicejs/config",
       "version": "0.1.0",
@@ -1135,6 +1146,8 @@
     "@servicejs/capability-streams": ["@servicejs/capability-streams@workspace:packages/capability-streams"],
 
     "@servicejs/capability-time": ["@servicejs/capability-time@workspace:packages/capability-time"],
+
+    "@servicejs/cas": ["@servicejs/cas@workspace:packages/cas"],
 
     "@servicejs/config": ["@servicejs/config@workspace:packages/config"],
 
