@@ -82,3 +82,19 @@ export {
   createInMemoryMigrationManager,
   createMobileComponentFactory,
 } from './mobility.js';
+
+// Plugin System
+export type {
+  PluginMetadata,
+  PluginHooks,
+  Plugin,
+  PluginState,
+  RegisteredPlugin,
+  PluginManager,
+} from './plugin.js';
+
+export {
+  createPluginManager,
+  createPlugin,
+  validatePluginDependencies,
+} from './plugin.js';
