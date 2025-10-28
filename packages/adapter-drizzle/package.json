@@ -1,0 +1,50 @@
+{
+  "name": "@servicejs/adapter-drizzle",
+  "version": "0.1.0",
+  "description": "Drizzle ORM adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "drizzle-orm": "^0.37.0"
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.8.1",
+    "mysql2": "^3.11.5",
+    "pg": "^8.13.1"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": {
+      "optional": true
+    },
+    "mysql2": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/pg": "^8.11.10",
+    "testcontainers": "^10.18.0",
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": ["servicejs", "adapter", "drizzle", "orm", "database"]
+}
