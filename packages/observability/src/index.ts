@@ -132,3 +132,24 @@ export type {
   AxiomAdapterOptions,
 } from './adapters/axiom.js';
 export { createAxiomAdapter, createAxiomAdapterWithQuery } from './adapters/axiom.js';
+
+// Testing utilities
+export {
+  assertEventEmitted,
+  assertSpanCreated,
+  assertSpanCompleted,
+  assertMetricRecorded,
+  assertLogEmitted,
+  assertNoEventEmitted,
+  assertChronologicalOrder,
+  assertSpanNesting,
+  countEventsByType,
+  getSpans,
+  getMetricsByName,
+  getLogsByLevel,
+  AssertionError,
+} from './testing.js';
+
+// Mock transport
+export type { MockTransport, CapturedMessage, MessagePredicate } from './mock-transport.js';
+export { createMockTransport, TransportAssertionError } from './mock-transport.js';
