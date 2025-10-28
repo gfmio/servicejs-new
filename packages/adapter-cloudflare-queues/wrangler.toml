@@ -1,0 +1,12 @@
+name = "adapter-cloudflare-queues-test"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[queues.producers]]
+queue = "test-queue"
+binding = "TEST_QUEUE"
+
+[[queues.consumers]]
+queue = "test-queue"
+max_batch_size = 10
+max_batch_timeout = 1
