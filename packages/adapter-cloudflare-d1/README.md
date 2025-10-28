@@ -345,13 +345,17 @@ See the `examples/` directory:
 
 ## Testing
 
-Tests use a mock D1 database:
+Tests run in a real Cloudflare Workers environment using Miniflare and Vitest:
 
 ```bash
 bun test
 ```
 
-For real D1 testing, deploy to Cloudflare Workers.
+The tests use `@cloudflare/vitest-pool-workers` which:
+- Runs tests in an actual Workers environment
+- Provides a real D1 database instance
+- Supports transactions and all D1 features
+- No mocking required - tests against real D1 API
 
 ## License
 
