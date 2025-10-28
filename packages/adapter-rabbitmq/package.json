@@ -1,0 +1,43 @@
+{
+  "name": "@servicejs/adapter-rabbitmq",
+  "version": "0.1.0",
+  "description": "RabbitMQ adapter for ServiceJS integration framework",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "dev": "tsup --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "adapter",
+    "rabbitmq",
+    "amqp",
+    "message-queue",
+    "integration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/integration-mq": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "amqplib": "^0.10.3"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@servicejs/result": "workspace:*"
+  }
+}
