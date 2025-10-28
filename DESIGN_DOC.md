@@ -2756,6 +2756,352 @@ function main(runtime: RuntimeCapabilities) {
 
 ---
 
+## Observability and Instrumentation
+
+### Events-Based Observability Philosophy
+
+ServiceJS takes a **unified events-based approach** to observability. All observability data (traces, metrics, logs) are represented as events/messages, making the observability system framework-agnostic and perfectly aligned with ServiceJS's message-passing architecture.
+
+**Core Principles:**
+
+1. **Everything is Events** - Spans, metrics, logs are all just events
+2. **Framework-Agnostic** - Not tied to OpenTelemetry, Prometheus, StatsD, etc.
+3. **Adapter Pattern** - Different backends consume the same event stream
+4. **Message Interception** - Automatic observability from existing messages
+5. **Testing-First** - Mock observability for easy testing
+6. **Zero-Overhead Option** - No-op mode for production if desired
+
+### Event Schema
+
+All observability events share a common structure:
+
+```typescript
+// Core event types
+type ObservabilityEvent =
+  | SpanStartEvent    // Start of a span (for tracing)
+  | SpanEndEvent      // End of a span
+  | MetricEvent       // Counter, gauge, or histogram value
+  | LogEvent          // Structured log message
+  | CustomEvent;      // Application-specific events
+
+// Span events for distributed tracing
+interface SpanStartEvent {
+  type: 'span.start';
+  spanId: string;           // Unique span ID
+  parentSpanId?: string;    // Parent span (for nesting)
+  traceId: string;          // Trace ID (groups related spans)
+  operation: string;        // Operation name (e.g., "http.request")
+  timestamp: number;        // Start timestamp
+  attributes?: Record<string, unknown>;  // Span attributes
+}
+
+interface SpanEndEvent {
+  type: 'span.end';
+  spanId: string;
+  duration: number;         // Duration in milliseconds
+  status: 'ok' | 'error';
+  attributes?: Record<string, unknown>;
+}
+
+// Metric events
+interface MetricEvent {
+  type: 'metric';
+  kind: 'counter' | 'gauge' | 'histogram';
+  name: string;             // Metric name (e.g., "http.requests")
+  value: number;
+  labels?: Record<string, string>;  // Metric labels/tags
+  timestamp: number;
+  spanId?: string;          // Link to span (for exemplars)
+}
+
+// Log events
+interface LogEvent {
+  type: 'log';
+  level: 'debug' | 'info' | 'warn' | 'error';
+  message: string;
+  context?: Record<string, unknown>;
+  timestamp: number;
+  spanId?: string;          // Link to active span
+  traceId?: string;         // Link to active trace
+}
+```
+
+### Trace Context Propagation
+
+Trace context (traceId, spanId, parentSpanId, baggage) flows through the system:
+
+```typescript
+// Trace context
+interface TraceContext {
+  traceId: string;          // Identifies the entire trace
+  spanId: string;           // Current span ID
+  parentSpanId?: string;    // Parent span (for nesting)
+  baggage?: Record<string, string>;  // Key-value context
+}
+
+// Context propagation in messages
+interface MessageWithContext {
+  type: 'example';
+  data: unknown;
+  _trace?: TraceContext;    // Optional trace context
+}
+
+// W3C Trace Context compatible
+// traceparent: 00-{traceId}-{spanId}-01
+// tracestate: vendor1=value1,vendor2=value2
+```
+
+### Observability Capability
+
+Simple interface for emitting events:
+
+```typescript
+interface ObservabilityCapability {
+  // Emit any observability event
+  emit(event: ObservabilityEvent): void;
+
+  // Helper: Create a span
+  withSpan<T>(
+    operation: string,
+    fn: (spanId: string) => T,
+    attributes?: Record<string, unknown>
+  ): T;
+
+  // Helper: Record a metric
+  counter(name: string, value: number, labels?: Record<string, string>): void;
+  gauge(name: string, value: number, labels?: Record<string, string>): void;
+  histogram(name: string, value: number, labels?: Record<string, string>): void;
+
+  // Helper: Log
+  log(level: string, message: string, context?: Record<string, unknown>): void;
+}
+```
+
+### Resource Attributes
+
+Services identify themselves with resource attributes:
+
+```typescript
+interface ResourceAttributes {
+  'service.name': string;      // e.g., "api-server"
+  'service.version': string;   // e.g., "1.2.3"
+  'service.instance.id': string;
+  'host.name'?: string;
+  'process.pid'?: number;
+  'telemetry.sdk.name'?: string;
+  'telemetry.sdk.version'?: string;
+}
+
+interface TelemetryConfig {
+  resource: ResourceAttributes;
+  sampling?: {
+    probability: number;      // 0.0 to 1.0 (1.0 = sample all)
+  };
+}
+```
+
+### Message Interception for Zero-Config Observability
+
+Components can be automatically instrumented by intercepting messages:
+
+```typescript
+// Wrap a capability with observability
+const instrumentedCap = withMessageObservability(
+  originalCapability,
+  observability,
+  { operation: 'process.message' }
+);
+
+// Every message sent through instrumentedCap automatically:
+// 1. Creates a span
+// 2. Extracts/injects trace context
+// 3. Emits metrics (counter, latency histogram)
+// 4. Logs errors
+```
+
+**Benefits:**
+- No code changes needed for basic observability
+- Consistent instrumentation across all components
+- Trace context automatically propagated
+- Works with existing messages (if not encrypted)
+
+### Backend Adapters
+
+Events are consumed by adapters that translate to specific backends:
+
+```typescript
+// OpenTelemetry adapter
+const otelAdapter = createOpenTelemetryAdapter({
+  endpoint: 'http://localhost:4318',
+  resource: config.resource
+});
+
+// Prometheus adapter (aggregates metrics, exposes /metrics)
+const prometheusAdapter = createPrometheusAdapter({
+  port: 9090,
+  resource: config.resource
+});
+
+// Console adapter (development)
+const consoleAdapter = createConsoleAdapter({ pretty: true });
+
+// Multiple backends simultaneously
+observability.subscribe(otelAdapter);
+observability.subscribe(prometheusAdapter);
+observability.subscribe(consoleAdapter);
+```
+
+**Supported Adapters:**
+- **OpenTelemetry**: Full OTLP support (spans, metrics, logs)
+- **Prometheus**: Metrics aggregation with /metrics endpoint
+- **StatsD**: UDP/TCP metrics export
+- **Console**: Pretty-printed events for development
+- **Structured Logs**: JSON logs compatible with log aggregators
+- **Custom**: Easy to write your own adapter
+
+### Event Storage and Replay
+
+Events can be stored for debugging and replay:
+
+```typescript
+// In-memory event buffer (ring buffer)
+const eventBuffer = createEventBuffer({ maxSize: 10000 });
+
+// Record events to disk
+const eventRecorder = createEventRecorder({
+  path: './events.ndjson'
+});
+
+// Query events
+const events = eventBuffer.query({
+  type: 'span.start',
+  timeRange: { start, end },
+  traceId: 'abc123'
+});
+
+// Replay events for debugging
+const replayAdapter = createReplayAdapter(events);
+```
+
+**Use Cases:**
+- Time-travel debugging
+- Reconstruct traces from historical data
+- Calculate metrics retroactively
+- Audit trails
+
+### Testing with Observability
+
+Mock observability for testing:
+
+```typescript
+// Create mock observability
+const mockObs = createMockObservability();
+
+// Test your component
+const component = createComponent({
+  // ... config
+  observability: mockObs
+});
+
+// Assert on emitted events
+expect(mockObs.getEvents({ type: 'span.start' })).toHaveLength(1);
+expect(mockObs.getEvents({ type: 'metric' }))
+  .toContainEqual({
+    type: 'metric',
+    name: 'messages.processed',
+    value: 5
+  });
+
+// Query by trace
+const trace = mockObs.getTrace(traceId);
+expect(trace.spans).toHaveLength(3);
+```
+
+### Auto-Instrumentation
+
+Components, mailboxes, and transports can be auto-instrumented:
+
+```typescript
+// Component with telemetry
+const component = createComponent({
+  urn: createURN('app', 'counter'),
+  state: { count: 0 },
+  reducer: counterReducer,
+  telemetry: {
+    observability: obs,
+    resource: { 'service.name': 'counter' }
+  }
+});
+
+// Automatically emits:
+// - Span per message processed
+// - Metrics: message.count, message.latency
+// - Logs on errors
+```
+
+### Sampling and Filtering
+
+Control what gets emitted:
+
+```typescript
+// Sample 10% of traces
+const config = {
+  sampling: { probability: 0.1 }
+};
+
+// Filter events before sending to backend
+const filteredAdapter = (event: ObservabilityEvent) => {
+  if (event.type === 'span.start' && shouldSample(event)) {
+    otelAdapter(event);
+  }
+};
+```
+
+### Best Practices
+
+1. **Default Sampling**: Sample everything by default, filter at adapter level
+2. **Resource Attributes**: Always set service.name and service.version
+3. **Span Attributes**: Add meaningful attributes (user.id, http.method, etc.)
+4. **Trace Context**: Propagate context across all boundaries
+5. **No-Op Production**: Use no-op observability if overhead matters
+6. **Multi-Backend**: Send same events to multiple backends
+7. **Event Storage**: Keep recent events in memory for debugging
+8. **Testing**: Always use mock observability in tests
+
+### Comparison with Traditional Approaches
+
+**Traditional (OpenTelemetry directly):**
+```typescript
+// Tightly coupled to OTel
+const tracer = otel.trace.getTracer('my-service');
+const span = tracer.startSpan('operation');
+// ... do work
+span.end();
+
+// Hard to test, hard to switch backends
+```
+
+**ServiceJS Events-Based:**
+```typescript
+// Framework-agnostic
+observability.withSpan('operation', (spanId) => {
+  // ... do work
+});
+
+// Easy to test (mock), easy to switch backends
+// Same events → OTel, Prometheus, StatsD, custom
+```
+
+**Benefits:**
+- ✅ Framework-agnostic
+- ✅ Easy to test
+- ✅ Multiple backends simultaneously
+- ✅ Event replay and analysis
+- ✅ Aligns with message-passing philosophy
+- ✅ Zero-config automatic instrumentation
+
+---
+
 ## Performance Considerations
 
 ### Local Transport

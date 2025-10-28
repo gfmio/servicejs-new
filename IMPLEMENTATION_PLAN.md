@@ -2022,113 +2022,253 @@ This document outlines the complete implementation plan for ServiceJS, organized
 
 ## Milestone 9: Observability and Testing
 
-**Goal:** Implement tracing, metrics, and testing utilities.
+**Goal:** Implement events-based observability system that is framework-agnostic and supports tracing, metrics, logging through a unified event stream.
 
-**Estimated Effort:** 5-6 days
+**Estimated Effort:** 6-8 days
 
-### 9.1 Message Tracing
+**Philosophy:** All observability data (traces, metrics, logs) are just events/messages. Different backends (OpenTelemetry, Prometheus, StatsD, custom) are consumers of the event stream. This enables flexibility, testability, and aligns perfectly with ServiceJS's message-passing architecture.
 
-- [ ] **Define trace types**
-  - Define `TraceContext` with trace ID, span ID, parent span ID
-  - Define `Span` with operation, start/end time, metadata
-  - Define `Tracer` interface
-  - Notes: OpenTelemetry-compatible
+### 9.1 Event Schema and Core Types
 
-- [ ] **Implement tracer**
-  - Create `createTracer` factory
-  - Implement startSpan
-  - Implement endSpan
-  - Implement context propagation
-  - Notes: Basic tracing
+- [ ] **Define observability event types**
+  - Define `SpanStartEvent` with spanId, parentSpanId, traceId, operation, timestamp, attributes
+  - Define `SpanEndEvent` with spanId, duration, status, attributes
+  - Define `MetricEvent` with type (counter/gauge/histogram), name, value, labels, timestamp
+  - Define `LogEvent` with level, message, context, timestamp, spanId (optional)
+  - Define `CustomEvent` for application-specific events
+  - Define `ObservabilityEvent` union type
+  - Notes: All events are just messages
 
-- [ ] **Implement traced capability**
-  - Wrap capability with tracing
-  - Start span on send
-  - End span after processing
-  - Propagate trace context in messages
-  - Notes: Automatic tracing
+- [ ] **Define trace context types**
+  - Define `TraceContext` with traceId, spanId, parentSpanId, baggage
+  - Define `SpanContext` with span metadata
+  - Implement W3C Trace Context compatible IDs
+  - Notes: Context propagation support
 
-- [ ] **Write tests for tracing**
-  - Test span creation
-  - Test context propagation
-  - Test nested spans
-  - Notes: Tracing tests
+- [ ] **Define resource attributes**
+  - Define `ResourceAttributes` for service.name, service.version, host, etc.
+  - Define `TelemetryConfig` with resource attributes and sampling config
+  - Notes: Service/component identification
 
-- [ ] **Write tracing documentation**
-  - Document tracing
-  - Add usage example
-  - Notes: Observability
+- [ ] **Write tests for event types**
+  - Test event creation
+  - Test trace context generation
+  - Test ID format compatibility
+  - Notes: Event schema tests
 
-### 9.2 Metrics Collection
+- [ ] **Write event schema documentation**
+  - Document all event types
+  - Document trace context format
+  - W3C Trace Context compatibility notes
+  - Notes: Event schema reference
 
-- [ ] **Define metric types**
-  - Define `Counter` for counters
-  - Define `Gauge` for gauges
-  - Define `Histogram` for histograms
-  - Define `MetricsRegistry`
-  - Notes: Prometheus-style metrics
+### 9.2 Observability Capability
 
-- [ ] **Implement metrics registry**
-  - Register metrics
-  - Collect all metrics
-  - Export in Prometheus format
-  - Notes: Centralized metrics
+- [ ] **Define observability capability interface**
+  - Define `ObservabilityCapability` with emit(event) method
+  - Define `SpanBuilder` for fluent span creation
+  - Define span start/end helpers
+  - Define metric helpers (counter, gauge, histogram)
+  - Define log helpers (debug, info, warn, error)
+  - Notes: Simple event emission interface
 
-- [ ] **Implement component metrics**
-  - Messages received counter
-  - Messages processed counter
-  - Processing latency histogram
-  - Queue depth gauge
-  - Error rate counter
-  - Notes: Built-in metrics
+- [ ] **Implement in-memory observability**
+  - Create `createInMemoryObservability` for testing
+  - Store events in array
+  - Support getEvents() and clear()
+  - Notes: Testing implementation
 
-- [ ] **Implement metrics capability wrapper**
-  - Wrap capability with metrics
-  - Track sends
-  - Track latency
-  - Notes: Automatic metrics
+- [ ] **Implement no-op observability**
+  - Create `createNoOpObservability` for production (zero overhead)
+  - All operations are no-ops
+  - Notes: Opt-out of telemetry
 
-- [ ] **Write tests for metrics**
-  - Test counter increments
-  - Test gauge updates
-  - Test histogram records
-  - Test Prometheus export
-  - Notes: Metrics tests
+- [ ] **Implement span helpers**
+  - Create `withSpan` helper for automatic span lifecycle
+  - Automatic span end on function completion
+  - Automatic error status on exceptions
+  - Context propagation through async calls
+  - Notes: Ergonomic span API
 
-- [ ] **Write metrics documentation**
-  - Document metrics
-  - Document metric types
-  - Add usage example
-  - Notes: Monitoring
+- [ ] **Write tests for observability capability**
+  - Test event emission
+  - Test span helpers
+  - Test metric helpers
+  - Test log helpers
+  - Notes: Capability tests
 
-### 9.3 Testing Utilities
+- [ ] **Write observability capability documentation**
+  - Document ObservabilityCapability interface
+  - Document span helpers
+  - Add usage examples
+  - Notes: Core telemetry API
+
+### 9.3 Context Propagation
+
+- [ ] **Implement context propagation**
+  - Create `withTraceContext` for async context tracking
+  - Implement context injection into messages
+  - Implement context extraction from messages
+  - Support W3C Trace Context headers
+  - Notes: Cross-component tracing
+
+- [ ] **Implement baggage propagation**
+  - Support baggage (key-value context) in trace context
+  - Propagate baggage across component boundaries
+  - Notes: Custom context data
+
+- [ ] **Write tests for context propagation**
+  - Test context through async calls
+  - Test context across components
+  - Test baggage propagation
+  - Notes: Context tests
+
+- [ ] **Write context propagation documentation**
+  - Document context propagation patterns
+  - Add distributed tracing examples
+  - Notes: Context guide
+
+### 9.4 Message Interception for Observability
+
+- [ ] **Implement message interceptor**
+  - Create `withMessageObservability` wrapper
+  - Intercept all messages sent through capability
+  - Emit events for message send/receive
+  - Extract trace context from messages
+  - Notes: Automatic observability from messages
+
+- [ ] **Implement component instrumentation**
+  - Wrap component with automatic span creation per message
+  - Track message processing duration
+  - Emit metric events (counters, histograms)
+  - Notes: Zero-config observability
+
+- [ ] **Write tests for message interception**
+  - Test message capture
+  - Test automatic span creation
+  - Test metric emission
+  - Notes: Interception tests
+
+- [ ] **Write message interception documentation**
+  - Document automatic instrumentation
+  - Add examples of zero-config observability
+  - Notes: Interception guide
+
+### 9.5 Event Storage and Replay
+
+- [ ] **Implement event buffer**
+  - Create `createEventBuffer` with configurable size
+  - Ring buffer for recent events
+  - Support filtering by event type
+  - Notes: In-memory event storage
+
+- [ ] **Implement event recorder**
+  - Record events to persistent storage
+  - Support event replay
+  - Time-travel debugging support
+  - Notes: Event sourcing for observability
+
+- [ ] **Implement event query interface**
+  - Query events by time range
+  - Query events by span ID / trace ID
+  - Query events by type
+  - Aggregate metrics from events
+  - Notes: Event analysis
+
+- [ ] **Write tests for event storage**
+  - Test buffering
+  - Test persistence
+  - Test replay
+  - Test queries
+  - Notes: Storage tests
+
+- [ ] **Write event storage documentation**
+  - Document event buffer
+  - Document event recorder
+  - Add debugging examples
+  - Notes: Storage guide
+
+### 9.6 Backend Adapters
+
+- [ ] **Implement OpenTelemetry adapter**
+  - Convert ObservabilityEvents to OTel format
+  - SpanStart/End → OTel spans
+  - MetricEvent → OTel metrics
+  - LogEvent → OTel logs
+  - Support OTLP export
+  - Notes: OTel compatibility
+
+- [ ] **Implement Prometheus adapter**
+  - Aggregate MetricEvents into Prometheus metrics
+  - Export /metrics endpoint
+  - Support counters, gauges, histograms, summaries
+  - Support exemplars (link metrics to traces)
+  - Notes: Prometheus exporter
+
+- [ ] **Implement StatsD adapter**
+  - Convert MetricEvents to StatsD format
+  - Send to StatsD server
+  - Support UDP and TCP
+  - Notes: StatsD integration
+
+- [ ] **Implement console adapter**
+  - Pretty-print events to console
+  - Color-coded by event type
+  - Human-readable format
+  - Notes: Development/debugging
+
+- [ ] **Implement structured logging adapter**
+  - Convert events to structured logs (JSON)
+  - Support common log formats (Bunyan, Pino, Winston)
+  - Notes: Log aggregation compatibility
+
+- [ ] **Write tests for adapters**
+  - Test OTel conversion
+  - Test Prometheus aggregation
+  - Test StatsD format
+  - Notes: Adapter tests
+
+- [ ] **Write adapter documentation**
+  - Document each adapter
+  - Add configuration examples
+  - Multi-backend examples
+  - Notes: Backend integration guide
+
+### 9.7 Testing Utilities
+
+- [ ] **Implement mock observability**
+  - Create `createMockObservability` for testing
+  - Capture all events
+  - Assertions: assertEventEmitted, assertSpanCreated, assertMetricRecorded
+  - Query events by type/span/trace
+  - Notes: Testing helper
 
 - [ ] **Implement mock transport**
   - Create `createMockTransport` factory
   - Capture sent messages
   - Implement assertions on messages
   - Implement message injection
-  - Notes: For testing
+  - Notes: Transport testing
 
-- [ ] **Implement test runner**
-  - Create `createTestRunner` factory
-  - Control message delivery
-  - Control time (fake timers)
-  - Flush pending messages
-  - Advance time deterministically
+- [ ] **Implement deterministic time**
+  - Integration with @servicejs/capability-time fake time
+  - Control event timestamps
+  - Fast-forward through spans
   - Notes: Deterministic testing
 
 - [ ] **Implement test assertions**
+  - assertEventEmitted(type, predicate)
+  - assertSpanCreated(operation, predicate)
+  - assertMetricRecorded(name, value)
+  - assertLogEmitted(level, message)
   - assertSent(target, message)
-  - assertNotSent(target, message)
   - assertReceived(message)
-  - assertState(expected)
   - Notes: Testing helpers
 
 - [ ] **Write tests for testing utilities**
-  - Test mock transport captures
-  - Test test runner controls time
-  - Test assertions work
+  - Test event capture
+  - Test assertions
+  - Test mock transport
   - Notes: Meta-tests
 
 - [ ] **Write testing documentation**
@@ -2137,44 +2277,98 @@ This document outlines the complete implementation plan for ServiceJS, organized
   - Add example tests
   - Notes: Testing best practices
 
-### 9.4 Debugging Tools
+### 9.8 Built-in Instrumentation
 
-- [ ] **Implement message recorder**
-  - Record all messages
-  - Store with timestamp
-  - Implement replay functionality
-  - Notes: Time-travel debugging
+- [ ] **Implement component auto-instrumentation**
+  - Optional telemetry config in component creation
+  - Automatic span per message processed
+  - Automatic metrics (message count, latency, errors)
+  - Zero-config "just works" mode
+  - Notes: Batteries-included telemetry
 
-- [ ] **Implement component inspector**
-  - Inspect component state
-  - View message history
-  - View effects emitted
-  - Notes: Runtime inspection
+- [ ] **Implement mailbox instrumentation**
+  - Queue depth gauge
+  - Enqueue/dequeue metrics
+  - Processing latency histogram
+  - Notes: Mailbox telemetry
 
-- [ ] **Write debugging documentation**
-  - Document debugging tools
-  - Add debugging guide
-  - Notes: Troubleshooting
+- [ ] **Implement transport instrumentation**
+  - Message send/receive spans
+  - Serialization metrics
+  - Transport error metrics
+  - Notes: Transport telemetry
 
-### 9.5 Observability Examples
+- [ ] **Write tests for instrumentation**
+  - Test auto-instrumentation
+  - Test metric emission
+  - Test span creation
+  - Notes: Instrumentation tests
 
-- [ ] **Create traced application example**
-  - Multiple components
-  - Distributed trace across components
-  - Visualize trace timeline
-  - Notes: End-to-end tracing
+- [ ] **Write instrumentation documentation**
+  - Document auto-instrumentation
+  - Configuration examples
+  - Disable instrumentation examples
+  - Notes: Instrumentation guide
 
-- [ ] **Create monitored application example**
-  - Collect metrics
-  - Export to Prometheus
-  - Create Grafana dashboard
-  - Notes: Production monitoring
+### 9.9 Observability Examples
 
-- [ ] **Create test suite example**
-  - Unit tests for reducers
-  - Integration tests with mock transport
-  - Deterministic tests with test runner
+- [ ] **Create basic observability example**
+  - Simple component with telemetry
+  - Console adapter output
+  - Notes: Getting started
+
+- [ ] **Create distributed tracing example**
+  - Multiple components with trace context
+  - Reconstruct trace tree from events
+  - Visualize spans
+  - Notes: Distributed tracing
+
+- [ ] **Create multi-backend example**
+  - Same events to OTel, Prometheus, and console
+  - Demonstrate adapter flexibility
+  - Notes: Multi-backend setup
+
+- [ ] **Create testing with telemetry example**
+  - Unit tests with mock observability
+  - Assert on emitted events
   - Notes: Testing patterns
+
+- [ ] **Create zero-config example**
+  - Component with default telemetry
+  - Automatic instrumentation
+  - No explicit config needed
+  - Notes: Batteries-included
+
+- [ ] **Create custom events example**
+  - Application-specific events
+  - Custom metrics derived from events
+  - Notes: Extensibility
+
+### Milestone 9 Summary
+
+**Philosophy:**
+- Everything is events/messages
+- Framework-agnostic (not tied to OTel/Prometheus/etc.)
+- Adapters translate events to backend formats
+- Same event stream feeds multiple backends
+- Message interception enables zero-config observability
+- Testing-first with mock implementations
+
+**Key Features:**
+- Unified event schema (spans, metrics, logs, custom)
+- Trace context propagation (W3C compatible)
+- Resource attributes for service identification
+- Message interception for automatic observability
+- Event storage and replay (time-travel debugging)
+- Backend adapters (OTel, Prometheus, StatsD, Console, Logs)
+- Rich testing utilities with event assertions
+- Auto-instrumentation (components, mailboxes, transports)
+- Zero-overhead no-op mode for production
+
+**Package Structure:**
+- @servicejs/observability - Core event types, capability interface
+- @servicejs/observability-adapters - Backend adapters (OTel, Prometheus, etc.)
+- @servicejs/testing - Testing utilities with observability support
 
 ---
 
