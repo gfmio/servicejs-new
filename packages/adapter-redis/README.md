@@ -26,6 +26,15 @@ npm install @servicejs/adapter-redis ioredis
 - ✅ Message attributes support
 - ✅ Type-safe messaging
 
+### Streams (Event Sourcing)
+- ✅ Event sourcing pattern support
+- ✅ Consumer groups for distributed processing
+- ✅ Message acknowledgment
+- ✅ Pending message tracking
+- ✅ Stream introspection
+- ✅ Capped streams (max length)
+- ✅ Range queries (forward and reverse)
+
 ### General
 - ✅ Type-safe with TypeScript
 - ✅ Result-based error handling
@@ -287,6 +296,110 @@ interface RedisPubSubConfig {
 
 ---
 
+## Streams (Event Sourcing)
+
+### Basic Streams
+
+```typescript
+import { createRedisStreams } from '@servicejs/adapter-redis';
+import { isOk } from '@servicejs/result';
+
+const streams = createRedisStreams();
+
+await streams.init({ host: 'localhost', port: 6379 });
+await streams.start();
+
+// Add events to stream
+await streams.xadd('user-events', {
+  type: 'user.created',
+  userId: '123',
+  name: 'Alice',
+});
+
+// Read all events
+const result = await streams.xread([
+  { stream: 'user-events', id: '0' }
+]);
+
+if (isOk(result)) {
+  for (const streamData of result.value) {
+    for (const msg of streamData.messages) {
+      console.log(`${msg.id}:`, msg.data);
+    }
+  }
+}
+```
+
+### Consumer Groups
+
+```typescript
+// Create consumer group
+await streams.xgroupCreate('user-events', 'processors', '0', false);
+
+// Worker 1 reads and processes
+const worker1Result = await streams.xreadgroup(
+  'processors',
+  'worker-1',
+  [{ stream: 'user-events', id: '>' }],
+  10
+);
+
+if (isOk(worker1Result)) {
+  for (const streamData of worker1Result.value) {
+    for (const msg of streamData.messages) {
+      // Process message
+      console.log('Processing:', msg.data);
+
+      // Acknowledge after processing
+      await streams.xack('user-events', 'processors', [msg.id]);
+    }
+  }
+}
+```
+
+### Capped Streams
+
+```typescript
+// Keep only last 1000 entries
+await streams.xadd(
+  'notifications',
+  { msg: 'New notification' },
+  undefined, // auto-generate ID
+  1000       // maxLen
+);
+```
+
+### Streams Configuration
+
+```typescript
+interface RedisStreamsConfig {
+  host?: string;        // Redis host (default: 'localhost')
+  port?: number;        // Redis port (default: 6379)
+  password?: string;    // Redis password (optional)
+  db?: number;          // Redis database number (default: 0)
+  keyPrefix?: string;   // Key prefix for all operations (optional)
+}
+```
+
+### When to Use Redis Streams
+
+**Use Redis Streams for:**
+- ✅ Event sourcing
+- ✅ Task queues with guaranteed delivery
+- ✅ Activity feeds
+- ✅ Real-time analytics
+- ✅ Distributed task queues
+- ✅ Change data capture (CDC)
+
+**Advantages over Pub/Sub:**
+- ✅ Message persistence
+- ✅ Consumer groups
+- ✅ Message acknowledgment
+- ✅ Pending message tracking
+- ✅ Message history
+
+---
+
 ## Use Cases
 
 ### Cache & Data Structures
@@ -304,16 +417,24 @@ interface RedisPubSubConfig {
 - **Event broadcasting**: Distribute events to multiple services
 - **Cache invalidation**: Notify services of cache changes
 
+### Streams (Event Sourcing)
+- **Event sourcing**: Store all state changes as events
+- **Task queues**: Reliable job processing with acknowledgments
+- **Activity feeds**: User activity streams
+- **Real-time analytics**: Event processing pipelines
+- **Change data capture**: Database change streams
+- **Audit logs**: Append-only event logs
+
 ## Examples
 
 - `examples/basic.ts` - Cache and data structures usage
 - `examples/pubsub.ts` - Pub/Sub messaging and chat demo
+- `examples/streams.ts` - Event sourcing with consumer groups
 
 ## Related Packages
 
 - [@servicejs/adapter-lru-cache](../adapter-lru-cache) - In-memory LRU cache
 - [@servicejs/adapter-upstash-redis](../adapter-upstash-redis) - Edge-compatible Redis
-- [@servicejs/adapter-redis-streams](../adapter-redis-streams) - Redis Streams for event sourcing
 
 ## License
 
