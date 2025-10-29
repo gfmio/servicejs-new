@@ -7,7 +7,7 @@
 import type { Result } from '@servicejs/result';
 import { err, ok } from '@servicejs/result';
 import type { Client, QuerySuccess, QueryFailure } from 'fauna';
-import { fql } from 'fauna';
+import { fql, Client as FaunaClient } from 'fauna';
 
 export interface FaunaAdapterConfig {
   // Fauna secret key
@@ -47,14 +47,19 @@ export const createFaunaAdapter = (): FaunaAdapter => {
       try {
         config = cfg;
 
-        // Dynamically import Fauna client
-        const { Client: FaunaClient } = await import('fauna');
-
-        client = new FaunaClient({
+        const clientConfig: any = {
           secret: cfg.secret,
-          endpoint: cfg.endpoint,
-          query_timeout_ms: cfg.queryTimeout,
-        });
+        };
+
+        if (cfg.endpoint !== undefined) {
+          clientConfig.endpoint = cfg.endpoint;
+        }
+
+        if (cfg.queryTimeout !== undefined) {
+          clientConfig.query_timeout_ms = cfg.queryTimeout;
+        }
+
+        client = new FaunaClient(clientConfig);
 
         return ok(undefined);
       } catch (error) {
