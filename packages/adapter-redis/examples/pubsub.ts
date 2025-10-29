@@ -1,14 +1,16 @@
 /**
- * Simple Chat Demo with Redis Pub/Sub
+ * Redis Pub/Sub Example
+ *
+ * Simple chat demo showing real-time message distribution
  *
  * Prerequisites: Redis server running on localhost:6379
- * Run with: bun examples/chat-demo.ts
+ * Run with: bun examples/pubsub.ts
  */
 
-import { createRedisMQAdapter } from '../src/redis-mq.js';
+import { createRedisPubSub } from '../src/index.js';
 import { isOk } from '@servicejs/result';
 
-const mq = createRedisMQAdapter();
+const mq = createRedisPubSub();
 
 // Initialize
 console.log('📡 Connecting to Redis...');
@@ -47,7 +49,7 @@ const producer = producerResult.value;
 const messages = [
   { user: 'Alice', message: 'Hello everyone!' },
   { user: 'Bob', message: 'Hey Alice! 👋' },
-  { user: 'Charlie', message: 'What\'s up?' },
+  { user: 'Charlie', message: "What's up?" },
   { user: 'Alice', message: 'Just testing the new chat system' },
   { user: 'Bob', message: 'Looks great!' },
 ];

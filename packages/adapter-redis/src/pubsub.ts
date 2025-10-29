@@ -15,7 +15,7 @@ import {
 } from '@servicejs/integration-mq';
 import type { Result } from '@servicejs/result';
 
-export interface RedisMQConfig {
+export interface RedisPubSubConfig {
   host?: string;
   port?: number;
   password?: string;
@@ -32,7 +32,7 @@ export interface RedisMQConfig {
  *
  * @example
  * ```typescript
- * const mq = createRedisMQAdapter();
+ * const mq = createRedisPubSub();
  *
  * await mq.init({ host: 'localhost', port: 6379 });
  * await mq.start();
@@ -63,16 +63,16 @@ export interface RedisMQConfig {
  * await mq.destroy();
  * ```
  */
-export const createRedisMQAdapter = (): MessageQueueAdapter => {
+export const createRedisPubSub = (): MessageQueueAdapter => {
   let publishClient: Redis | null = null;
   let subscribeClient: Redis | null = null;
-  let config: RedisMQConfig | null = null;
+  let config: RedisPubSubConfig | null = null;
   let producerCounter = 0;
   let consumerCounter = 0;
 
   const adapter = createMessageQueueAdapter(
     {
-      name: 'redis-mq',
+      name: 'redis-pubsub',
       version: '1.0.0',
       type: 'message-queue',
       platforms: ['node', 'bun'],
@@ -80,7 +80,7 @@ export const createRedisMQAdapter = (): MessageQueueAdapter => {
     },
     {
       onInit: async (cfg) => {
-        config = cfg as unknown as RedisMQConfig;
+        config = cfg as unknown as RedisPubSubConfig;
 
         try {
           const redisOptions: {

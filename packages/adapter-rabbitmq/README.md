@@ -240,12 +240,14 @@ await mq.destroy();
 ## RabbitMQ vs Redis Pub/Sub
 
 **RabbitMQ** (this adapter):
+
 - ✅ Reliable delivery with acknowledgments
 - ✅ Message persistence
 - ✅ Work queue distribution
 - ✅ Better for task queues
 
-**Redis Pub/Sub** (@servicejs/adapter-redis-mq):
+**Redis Pub/Sub** (@servicejs/adapter-redis):
+
 - ✅ Lower latency
 - ✅ Simpler setup
 - ✅ Fan-out broadcasting

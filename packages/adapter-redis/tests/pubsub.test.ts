@@ -1,73 +1,80 @@
 /**
- * Tests for Redis MQ Adapter
- *
- * These tests require Docker to be installed and running
+ * Tests for Redis Pub/Sub Adapter
  */
 
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { createRedisMQAdapter } from '../src/redis-mq.js';
-import { ok, err, isOk, isErr } from '@servicejs/result';
+import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { GenericContainer, type StartedTestContainer } from 'testcontainers';
+import { createRedisPubSub } from '../src/index.js';
+import { isOk, isErr } from '@servicejs/result';
 import type { MessageQueueAdapter } from '@servicejs/integration-mq';
-import { startRedisContainer, isDockerAvailable, type RedisContainer } from './redis-container.js';
 
-let redisContainer: RedisContainer | null = null;
-let adapter: MessageQueueAdapter;
+describe('Redis Pub/Sub Adapter', () => {
+  let container: StartedTestContainer;
+  let adapter: MessageQueueAdapter;
 
-// Check if Docker is available, skip tests if not
-const dockerAvailable = await isDockerAvailable();
+  beforeEach(async () => {
+    container = await new GenericContainer('redis:7-alpine')
+      .withExposedPorts(6379)
+      .withStartupTimeout(120000)
+      .start();
 
-if (!dockerAvailable) {
-  console.log('⚠️  Docker not available, skipping Redis MQ tests');
-  console.log('   Install Docker to run these tests: https://www.docker.com/get-started\n');
-}
-
-const describeWithDocker = dockerAvailable ? describe : describe.skip;
-
-describeWithDocker('Redis MQ Adapter', () => {
-  beforeAll(async () => {
-    if (!dockerAvailable) return;
-
-    redisContainer = await startRedisContainer();
-    adapter = createRedisMQAdapter();
+    adapter = createRedisPubSub();
   });
 
-  afterAll(async () => {
+  afterEach(async () => {
     if (adapter) {
       await adapter.stop();
       await adapter.destroy();
     }
-    if (redisContainer) {
-      await redisContainer.stop();
+    if (container) {
+      await container.stop();
     }
   });
 
   describe('Lifecycle', () => {
     test('should initialize with valid config', async () => {
       const result = await adapter.init({
-        host: redisContainer!.host,
-        port: redisContainer!.port,
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
       });
       expect(isOk(result)).toBe(true);
     });
 
     test('should start after initialization', async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+
       const result = await adapter.start();
       expect(isOk(result)).toBe(true);
     });
 
     test('should stop after starting', async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+
       const result = await adapter.stop();
       expect(isOk(result)).toBe(true);
     });
 
     test('should destroy resources', async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+
       const result = await adapter.destroy();
       expect(isOk(result)).toBe(true);
 
       // Re-initialize for other tests
       await adapter.init({
-        host: redisContainer!.host,
-        port: redisContainer!.port,
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
       });
       await adapter.start();
     });
@@ -75,6 +82,12 @@ describeWithDocker('Redis MQ Adapter', () => {
 
   describe('Health Checks', () => {
     test('should report healthy when connected', async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+
       const result = await adapter.health();
       expect(isOk(result)).toBe(true);
       if (isOk(result)) {
@@ -84,6 +97,14 @@ describeWithDocker('Redis MQ Adapter', () => {
   });
 
   describe('Producer', () => {
+    beforeEach(async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+    });
+
     test('should create producer', async () => {
       const result = await adapter.createProducer();
       expect(isOk(result)).toBe(true);
@@ -123,6 +144,14 @@ describeWithDocker('Redis MQ Adapter', () => {
   });
 
   describe('Consumer', () => {
+    beforeEach(async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+    });
+
     test('should create consumer', async () => {
       const result = await adapter.createConsumer();
       expect(isOk(result)).toBe(true);
@@ -251,6 +280,14 @@ describeWithDocker('Redis MQ Adapter', () => {
   });
 
   describe('Quick Publish', () => {
+    beforeEach(async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+    });
+
     test('should publish message directly', async () => {
       const result = await adapter.publish('test-quick', { message: 'Quick publish' });
       expect(isOk(result)).toBe(true);
@@ -258,6 +295,14 @@ describeWithDocker('Redis MQ Adapter', () => {
   });
 
   describe('Fan-Out Pattern', () => {
+    beforeEach(async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+    });
+
     test('should deliver message to multiple consumers', async () => {
       const received1: unknown[] = [];
       const received2: unknown[] = [];
@@ -303,6 +348,14 @@ describeWithDocker('Redis MQ Adapter', () => {
   });
 
   describe('Message Acknowledgment', () => {
+    beforeEach(async () => {
+      await adapter.init({
+        host: container.getHost(),
+        port: container.getMappedPort(6379),
+      });
+      await adapter.start();
+    });
+
     test('should acknowledge message', async () => {
       const consumerResult = await adapter.createConsumer();
       expect(isOk(consumerResult)).toBe(true);

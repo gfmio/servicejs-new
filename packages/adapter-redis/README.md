@@ -1,6 +1,6 @@
 # @servicejs/adapter-redis
 
-Redis cache adapter with Cluster support for ServiceJS.
+Complete Redis adapter suite for ServiceJS.
 
 ## Installation
 
@@ -10,6 +10,7 @@ npm install @servicejs/adapter-redis ioredis
 
 ## Features
 
+### Cache & Data Structures
 - ✅ Standalone and Cluster modes
 - ✅ Full Redis command support
 - ✅ Cache, hash, list, set, sorted set operations
@@ -17,6 +18,15 @@ npm install @servicejs/adapter-redis ioredis
 - ✅ Pattern matching and scanning
 - ✅ TTL support
 - ✅ Connection pooling
+
+### Pub/Sub Messaging
+- ✅ Real-time message distribution
+- ✅ Producer/Consumer pattern
+- ✅ Fan-out messaging (multiple subscribers)
+- ✅ Message attributes support
+- ✅ Type-safe messaging
+
+### General
 - ✅ Type-safe with TypeScript
 - ✅ Result-based error handling
 
@@ -168,19 +178,136 @@ await cache.keys(pattern: string): Promise<Result<string[], Error>>
 await cache.scan(cursor: string, pattern?: string, count?: number): Promise<Result<{cursor: string, keys: string[]}, Error>>
 ```
 
+---
+
+## Pub/Sub Messaging
+
+### Basic Pub/Sub
+
+```typescript
+import { createRedisPubSub } from '@servicejs/adapter-redis';
+import { isOk } from '@servicejs/result';
+
+const mq = createRedisPubSub();
+
+await mq.init({ host: 'localhost', port: 6379 });
+await mq.start();
+
+// Create consumer
+const consumerResult = await mq.createConsumer();
+if (isOk(consumerResult)) {
+  const consumer = consumerResult.value;
+
+  await consumer.subscribe('events', async (msg) => {
+    console.log('Received:', msg.data);
+    await msg.ack();
+  });
+}
+
+// Create producer
+const producerResult = await mq.createProducer();
+if (isOk(producerResult)) {
+  const producer = producerResult.value;
+  await producer.publish('events', {
+    type: 'user.created',
+    userId: '123',
+  });
+  await producer.close();
+}
+```
+
+### Quick Publish
+
+For simple one-off messages:
+
+```typescript
+await mq.publish('notifications', {
+  message: 'Hello World!',
+  timestamp: Date.now(),
+});
+```
+
+### Fan-Out Pattern
+
+Multiple consumers receive all messages:
+
+```typescript
+// Email service consumer
+const emailConsumer = (await mq.createConsumer()).value;
+await emailConsumer.subscribe('user.events', async (msg) => {
+  await sendWelcomeEmail(msg.data.userId);
+  await msg.ack();
+});
+
+// Analytics service consumer
+const analyticsConsumer = (await mq.createConsumer()).value;
+await analyticsConsumer.subscribe('user.events', async (msg) => {
+  await trackUserCreation(msg.data.userId);
+  await msg.ack();
+});
+
+// Both consumers receive all messages
+await mq.publish('user.events', {
+  type: 'user.created',
+  userId: '456',
+});
+```
+
+### Pub/Sub Configuration
+
+```typescript
+interface RedisPubSubConfig {
+  host?: string;        // Redis host (default: 'localhost')
+  port?: number;        // Redis port (default: 6379)
+  password?: string;    // Redis password (optional)
+  db?: number;          // Redis database number (default: 0)
+  keyPrefix?: string;   // Key prefix for all operations (optional)
+}
+```
+
+### Pub/Sub Limitations
+
+**No Message Persistence**: Messages are only delivered to currently connected subscribers. If no subscribers are listening, the message is lost.
+
+**No Acknowledgment Guarantees**: The `ack()` and `nack()` methods are no-ops (they exist for interface compatibility).
+
+**No Message Ordering Guarantees**: Messages may arrive out of order.
+
+**When to Use Redis Pub/Sub:**
+- ✅ Real-time notifications
+- ✅ Chat applications
+- ✅ Live updates/dashboards
+- ✅ Event broadcasting
+- ✅ Cache invalidation
+
+**When NOT to use Redis Pub/Sub:**
+- ❌ Task queues (use Redis Streams or RabbitMQ)
+- ❌ Guaranteed message delivery
+- ❌ Message persistence
+
+---
+
 ## Use Cases
 
+### Cache & Data Structures
 - **Application cache**: High-performance caching layer
 - **Session storage**: User session management
 - **Leaderboards**: Real-time scoring with sorted sets
 - **Rate limiting**: Counter-based rate limiting
 - **Job queues**: List-based task queues
-- **Pub/Sub messaging**: Real-time messaging
 - **Distributed locks**: Coordination between services
+
+### Pub/Sub Messaging
+- **Real-time notifications**: Push notifications to users
+- **Chat applications**: Real-time messaging
+- **Live dashboards**: Real-time data updates
+- **Event broadcasting**: Distribute events to multiple services
+- **Cache invalidation**: Notify services of cache changes
 
 ## Examples
 
-See `examples/basic.ts` for comprehensive usage examples.
+- `examples/basic.ts` - Cache and data structures usage
+- `examples/pubsub.ts` - Pub/Sub messaging and chat demo
 
 ## Related Packages
 
