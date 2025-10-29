@@ -2,10 +2,10 @@
  * AsyncResult Tests
  */
 
-import { describe, test, expect } from 'bun:test';
+import { none, some } from '@servicejs/option';
+import { describe, expect, test } from 'bun:test';
 import { AsyncResult } from '../src/async-result.js';
-import { ok, err, isOk, isErr } from '../src/result.js';
-import { some, none } from '@servicejs/option';
+import { isErr, isOk, ok } from '../src/result.js';
 
 describe('AsyncResult', () => {
   describe('constructor and factory methods', () => {

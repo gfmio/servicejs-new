@@ -171,6 +171,68 @@ AsyncResult implements `PromiseLike<Result<T, E>>`, so you can await it directly
 const result: Result<T, E> = await asyncResult;
 ```
 
+### Helper Functions for Wrapping Functions
+
+These helpers wrap functions to automatically catch errors and convert them to Results:
+
+- `trySafe<T, E>(fn: () => T, mapError: (error: unknown) => E): Result<T, E>` - Wrap synchronous function
+- `tryAsync<T, E>(fn: () => Promise<T>, mapError: (error: unknown) => E): AsyncResult<T, E>` - Wrap async function
+- `tryMaybeAsync<T, E>(fn: () => T | Promise<T>, mapError: (error: unknown) => E): Result<T, E> | AsyncResult<T, E>` - Wrap function that may be sync or async
+
+**When to use:**
+
+- Use `trySafe` for synchronous functions that may throw
+- Use `tryAsync` for async functions (most common)
+- Use `tryMaybeAsync` when you want to preserve sync performance (e.g., cache with async fallback)
+
+**Examples:**
+
+```typescript
+// trySafe - for synchronous operations
+const parseResult = trySafe(
+  () => JSON.parse(jsonString),
+  error => `Parse error: ${error}`
+);
+
+// tryAsync - for async operations (most common)
+const fetchResult = tryAsync(
+  async () => {
+    const response = await fetch('/api/user');
+    return response.json();
+  },
+  error => `Fetch failed: ${error}`
+);
+
+// Chain operations on AsyncResult
+const userName = await fetchResult
+  .map(user => user.name)
+  .mapErr(error => new Error(error));
+
+// tryMaybeAsync - for functions that may be sync or async
+const cache = new Map();
+const getUser = (id: number) => {
+  const cached = cache.get(id);
+  if (cached) return cached; // sync
+  return fetch(`/api/users/${id}`).then(r => r.json()); // async
+};
+
+const result = tryMaybeAsync(
+  () => getUser(123),
+  error => String(error)
+);
+
+// Handle both sync and async cases
+if (result instanceof AsyncResult) {
+  const user = await result;
+  console.log(user);
+} else {
+  // It's a Result, no await needed
+  if (isOk(result)) {
+    console.log(result.value);
+  }
+}
+```
+
 ## HKT Types
 
 This package includes HKT (Higher-Kinded Type) definitions for type-level operations:

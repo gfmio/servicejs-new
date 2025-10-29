@@ -66,4 +66,4 @@ export {
   toUndefined,
 } from './utilities.js';
 
-export { AsyncResult } from './async-result.js';
+export { AsyncResult, trySafe, tryAsync, tryMaybeAsync } from './async-result.js';

@@ -6,9 +6,9 @@
  * and provides combinators that work directly on the async Result.
  */
 
+import { none, some, type Option } from '@servicejs/option';
+import { err, isErr, isOk, ok } from './result.js';
 import type { Result } from './types.js';
-import { ok, err, isOk, isErr } from './result.js';
-import { some, none, type Option } from '@servicejs/option';
 
 /**
  * AsyncResult - A Promise wrapper for Result types
@@ -465,3 +465,5 @@ export class AsyncResult<T, E> implements PromiseLike<Result<T, E>> {
     );
   }
 }
+
+
