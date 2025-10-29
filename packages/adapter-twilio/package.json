@@ -20,6 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@servicejs/adapter-sms": "workspace:*",
     "@servicejs/result": "workspace:*",
     "twilio": "^5.3.5"
   },

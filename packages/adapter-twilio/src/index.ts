@@ -7,3 +7,8 @@ export {
   type VoiceCallOptions,
   type VoiceCallResponse,
 } from './twilio.js';
+
+export {
+  createTwilioSMSAdapter,
+  type TwilioSMSConfig,
+} from './sms.js';
