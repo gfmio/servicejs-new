@@ -1,0 +1,35 @@
+{
+  "name": "@servicejs/adapter-prisma",
+  "version": "0.1.0",
+  "description": "Prisma ORM adapter for type-safe database access",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "peerDependencies": {
+    "@prisma/client": "^5.0.0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.0.0",
+    "prisma": "^5.0.0",
+    "typescript": "^5.7.2",
+    "tsup": "^8.3.5"
+  },
+  "keywords": ["servicejs", "adapter", "prisma"]
+}
