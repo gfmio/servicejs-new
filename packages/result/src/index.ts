@@ -65,3 +65,5 @@ export {
   toNullable,
   toUndefined,
 } from './utilities.js';
+
+export { AsyncResult } from './async-result.js';

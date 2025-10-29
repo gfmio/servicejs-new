@@ -139,6 +139,38 @@ const message = match(result, {
 - `tryCatch<T, E>(fn: () => T, onError: (error: unknown) => E): Result<T, E>` - Execute function and catch errors
 - `tryCatchAsync<T, E>(fn: () => Promise<T>, onError: (error: unknown) => E): Promise<Result<T, E>>` - Execute async function and catch errors
 
+### AsyncResult
+
+AsyncResult is a Promise wrapper for Result types that provides convenient methods for chaining async operations.
+
+**Static Methods:**
+- `AsyncResult.from<T, E>(promise: Promise<T>, mapError?: (error: unknown) => E): AsyncResult<T, E>` - Create from Promise, catching errors
+- `AsyncResult.fromResult<T, E>(result: Result<T, E>): AsyncResult<T, E>` - Wrap Result in AsyncResult
+- `AsyncResult.ok<T>(value: T): AsyncResult<T, never>` - Create AsyncResult with Ok
+- `AsyncResult.err<E>(error: E): AsyncResult<never, E>` - Create AsyncResult with Err
+- `AsyncResult.all<T, E>(results: AsyncResult<T, E>[]): AsyncResult<T[], E>` - Combine multiple AsyncResults
+- `AsyncResult.race<T, E>(results: AsyncResult<T, E>[]): AsyncResult<T, E>` - Race multiple AsyncResults
+
+**Instance Methods:**
+- `map<U>(fn: (value: T) => U): AsyncResult<U, E>` - Transform Ok value
+- `mapErr<F>(fn: (error: E) => F): AsyncResult<T, F>` - Transform Err value
+- `andThen<U>(fn: (value: T) => AsyncResult<U, E> | Result<U, E>): AsyncResult<U, E>` - Chain operations
+- `orElse<F>(fn: (error: E) => AsyncResult<T, F> | Result<T, F>): AsyncResult<T, F>` - Recover from errors
+- `unwrap(): Promise<T>` - Extract value or throw
+- `unwrapOr(defaultValue: T): Promise<T>` - Extract value or use default
+- `unwrapOrElse(fn: (error: E) => T): Promise<T>` - Extract value or compute default
+- `unwrapErr(): Promise<E>` - Extract error or throw
+- `isOk(): Promise<boolean>` - Check if Result is Ok
+- `isErr(): Promise<boolean>` - Check if Result is Err
+- `match<U>(handlers: { onOk: (value: T) => U; onErr: (error: E) => U }): Promise<U>` - Pattern match
+- `toOption(): Promise<Option<T>>` - Convert to Option
+
+**Awaitable:**
+AsyncResult implements `PromiseLike<Result<T, E>>`, so you can await it directly:
+```typescript
+const result: Result<T, E> = await asyncResult;
+```
+
 ## HKT Types
 
 This package includes HKT (Higher-Kinded Type) definitions for type-level operations:
@@ -151,6 +183,106 @@ import { type ResultHKTO } from '@servicejs/result';
 ```
 
 ## Examples
+
+### AsyncResult Examples
+
+#### Basic Usage
+```typescript
+import { AsyncResult } from '@servicejs/result';
+
+// Create from a Promise that might throw
+async function fetchData(url: string): AsyncResult<Data, string> {
+  return AsyncResult.from(
+    fetch(url).then(r => r.json()),
+    error => `Fetch failed: ${error}`
+  );
+}
+
+// Use as return type of async functions
+async function divide(a: number, b: number): AsyncResult<number, string> {
+  if (b === 0) {
+    return AsyncResult.err('Division by zero');
+  }
+  return AsyncResult.ok(a / b);
+}
+
+// Chain operations
+const result = await divide(10, 2)
+  .map(x => x * 2)
+  .map(x => `Result: ${x}`);
+```
+
+#### Validation Chain
+```typescript
+interface User {
+  name: string;
+  age: number;
+  email: string;
+}
+
+const validateName = (user: User): AsyncResult<User, string> => {
+  return user.name.length > 0
+    ? AsyncResult.ok(user)
+    : AsyncResult.err('Name is required');
+};
+
+const validateAge = (user: User): AsyncResult<User, string> => {
+  return user.age >= 18
+    ? AsyncResult.ok(user)
+    : AsyncResult.err('Must be 18 or older');
+};
+
+const validateEmail = (user: User): AsyncResult<User, string> => {
+  return user.email.includes('@')
+    ? AsyncResult.ok(user)
+    : AsyncResult.err('Invalid email');
+};
+
+// Chain validations
+const result = await AsyncResult.ok(userData)
+  .andThen(validateName)
+  .andThen(validateAge)
+  .andThen(validateEmail);
+
+// Handle result
+if (isOk(result)) {
+  console.log('User is valid:', result.value);
+} else {
+  console.error('Validation failed:', result.error);
+}
+```
+
+#### Error Recovery
+```typescript
+const primary = AsyncResult.from(
+  fetchFromPrimary(),
+  error => `Primary failed: ${error}`
+);
+
+const result = await primary.orElse(error => {
+  console.warn(error);
+  return AsyncResult.from(
+    fetchFromBackup(),
+    error => `Backup also failed: ${error}`
+  );
+});
+```
+
+#### Combining Multiple AsyncResults
+```typescript
+const results = await AsyncResult.all([
+  fetchUser(1),
+  fetchUser(2),
+  fetchUser(3),
+]);
+
+// results is Ok([user1, user2, user3]) or first Err
+
+const users = await results.match({
+  onOk: users => users.map(u => u.name),
+  onErr: error => [],
+});
+```
 
 ### Basic Usage
 
@@ -217,7 +349,33 @@ const sum = map(combined, values =>
 // Result: Ok(15)
 ```
 
-### Async Operations
+### Async Operations with AsyncResult
+
+```typescript
+import { AsyncResult } from '@servicejs/result';
+
+// AsyncResult provides a better way to handle async operations
+async function fetchUser(id: number): AsyncResult<User, string> {
+  return AsyncResult.from(
+    fetch(`/api/users/${id}`).then(r => r.json()),
+    error => `Fetch failed: ${error}`
+  );
+}
+
+// Chain async operations without try/catch
+const result = await fetchUser(123)
+  .map(user => user.name)
+  .mapErr(error => `Error: ${error}`)
+  .andThen(name => validateName(name));
+
+// Use with pattern matching
+const message = await fetchUser(123).match({
+  onOk: user => `Hello, ${user.name}!`,
+  onErr: error => `Error: ${error}`,
+});
+```
+
+### Legacy Async Operations (using tryCatchAsync)
 
 ```typescript
 import { tryCatchAsync, andThen } from '@servicejs/result';
