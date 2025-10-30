@@ -319,6 +319,8 @@
       },
       "devDependencies": {
         "@elastic/elasticsearch": "^8.15.0",
+        "@testcontainers/elasticsearch": "^10.13.2",
+        "testcontainers": "^10.13.2",
         "tsup": "^8.3.5",
         "typescript": "^5.7.2",
       },
@@ -501,6 +503,7 @@
       },
       "devDependencies": {
         "meilisearch": "^0.44.1",
+        "testcontainers": "^10.13.2",
         "tsup": "^8.3.5",
         "typescript": "^5.7.2",
       },
@@ -649,10 +652,22 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/adapter-payment": {
+      "name": "@servicejs/adapter-payment",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
     "packages/adapter-paypal": {
       "name": "@servicejs/adapter-paypal",
       "version": "0.1.0",
       "dependencies": {
+        "@servicejs/adapter-payment": "workspace:*",
         "@servicejs/result": "workspace:*",
       },
       "devDependencies": {
@@ -878,6 +893,18 @@
         "typescript": "^5.7.2",
       },
     },
+    "packages/adapter-sns": {
+      "name": "@servicejs/adapter-sns",
+      "version": "0.1.0",
+      "dependencies": {
+        "@servicejs/adapter-sms": "workspace:*",
+        "@servicejs/result": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.3.5",
+        "typescript": "^5.7.2",
+      },
+    },
     "packages/adapter-sqs": {
       "name": "@servicejs/adapter-sqs",
       "version": "0.1.0",
@@ -894,6 +921,7 @@
       "name": "@servicejs/adapter-square",
       "version": "0.1.0",
       "dependencies": {
+        "@servicejs/adapter-payment": "workspace:*",
         "@servicejs/result": "workspace:*",
       },
       "devDependencies": {
@@ -905,6 +933,7 @@
       "name": "@servicejs/adapter-stripe",
       "version": "0.1.0",
       "dependencies": {
+        "@servicejs/adapter-payment": "workspace:*",
         "@servicejs/result": "workspace:*",
       },
       "devDependencies": {
@@ -1012,6 +1041,7 @@
       "name": "@servicejs/adapter-twilio",
       "version": "0.1.0",
       "dependencies": {
+        "@servicejs/adapter-sms": "workspace:*",
         "@servicejs/result": "workspace:*",
         "twilio": "^5.3.5",
       },
@@ -1044,6 +1074,7 @@
         "@servicejs/result": "workspace:*",
       },
       "devDependencies": {
+        "testcontainers": "^10.13.2",
         "tsup": "^8.3.5",
         "typescript": "^5.7.2",
         "typesense": "^2.1.0",
@@ -2674,6 +2705,8 @@
 
     "@servicejs/adapter-openapi": ["@servicejs/adapter-openapi@workspace:packages/adapter-openapi"],
 
+    "@servicejs/adapter-payment": ["@servicejs/adapter-payment@workspace:packages/adapter-payment"],
+
     "@servicejs/adapter-paypal": ["@servicejs/adapter-paypal@workspace:packages/adapter-paypal"],
 
     "@servicejs/adapter-planetscale": ["@servicejs/adapter-planetscale@workspace:packages/adapter-planetscale"],
@@ -2707,6 +2740,8 @@
     "@servicejs/adapter-slack": ["@servicejs/adapter-slack@workspace:packages/adapter-slack"],
 
     "@servicejs/adapter-sms": ["@servicejs/adapter-sms@workspace:packages/adapter-sms"],
+
+    "@servicejs/adapter-sns": ["@servicejs/adapter-sns@workspace:packages/adapter-sns"],
 
     "@servicejs/adapter-sqs": ["@servicejs/adapter-sqs@workspace:packages/adapter-sqs"],
 
@@ -2991,6 +3026,8 @@
     "@szmarczak/http-timer": ["@szmarczak/http-timer@4.0.6", "", { "dependencies": { "defer-to-connect": "^2.0.0" } }, "sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w=="],
 
     "@tauri-apps/api": ["@tauri-apps/api@2.9.0", "", {}, "sha512-qD5tMjh7utwBk9/5PrTA/aGr3i5QaJ/Mlt7p8NilQ45WgbifUNPyKWsA63iQ8YfQq6R8ajMapU+/Q8nMcPRLNw=="],
+
+    "@testcontainers/elasticsearch": ["@testcontainers/elasticsearch@10.28.0", "", { "dependencies": { "testcontainers": "^10.28.0" } }, "sha512-T32fg2L+DWl4q7HHKwm+VbVhqqOfGyx7nutuq2Q5rbOC8/EOtqHum8ZzjDhn5R300F+U6Oc/EON/c4NZXlYgIw=="],
 
     "@tootallnate/once": ["@tootallnate/once@2.0.0", "", {}, "sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A=="],
 
