@@ -3684,34 +3684,40 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 ### 12.14 Media & CDN
 
-**Status**: New
+**Status**: Complete ✅
 
-- [ ] **Cloudinary adapter**
+- [x] **Cloudinary adapter** ✅
   - Image/video uploads
   - Transformations
   - CDN delivery
   - Asset management
   - Notes: Media management platform
+  - Tests: cloudinary.test.ts
+  - Examples: basic.ts, transformations.ts, asset-management.ts
 
-- [ ] **UploadThing adapter**
+- [x] **UploadThing adapter** ✅
   - File uploads
   - Type-safe uploads
   - Access control
   - Image optimization
   - Notes: Modern file upload solution
+  - Tests: uploadthing.test.ts
+  - Examples: basic.ts, file-management.ts, image-uploads.ts
 
-- [ ] **BunnyCDN adapter**
+- [x] **BunnyCDN adapter** ✅
   - CDN distribution
   - Storage zones
   - Purge operations
   - Stream delivery
   - Notes: Affordable CDN
+  - Tests: bunnycdn.test.ts
+  - Examples: basic.ts, storage-management.ts, cache-purge.ts
 
 ### 12.15 API & Integration
 
-**Status**: New
+**Status**: In Progress
 
-- [ ] **Webhook adapter**
+- [x] **Webhook adapter**
   - Webhook sender
   - Signature verification
   - Retry logic
@@ -3739,14 +3745,14 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - Multiple formats
   - Notes: REST API client from OpenAPI specs
 
-- [ ] **HTTP client adapter**
+- [x] **HTTP client adapter**
   - Modern HTTP client (using `ky` or similar)
   - Request/response interceptors
   - Retry logic
   - Timeout handling
   - Notes: General-purpose HTTP client
 
-- [ ] **TCP client adapter**
+- [x] **TCP client adapter**
   - Low-level TCP connections
   - Binary protocol support
   - Connection pooling
