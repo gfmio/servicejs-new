@@ -3787,56 +3787,70 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 ### 12.17 AI & ML Services
 
-**Status**: New
+**Status**: Complete ✅
 
-- [ ] **OpenAI adapter**
+- [x] **OpenAI adapter** ✅
   - Chat completions
   - Embeddings
   - Image generation (DALL-E)
   - Function calling
   - Notes: GPT models
+  - Tests: openai.test.ts
+  - Examples: basic.ts, embeddings-similarity.ts, streaming.ts
 
-- [ ] **Anthropic adapter**
+- [x] **Anthropic adapter** ✅
   - Claude API
   - Chat completions
   - Streaming responses
   - Function calling
   - Notes: Claude models
+  - Tests: anthropic.test.ts
+  - Examples: basic.ts, streaming.ts, vision.ts
 
-- [ ] **Hugging Face adapter**
+- [x] **Hugging Face adapter** ✅
   - Inference API
   - Model hosting
   - Text generation
   - Image/audio models
   - Notes: Open-source model hub
+  - Tests: huggingface.test.ts
+  - Examples: image-tasks.ts, model-search.ts, text-tasks.ts
 
-- [ ] **Replicate adapter**
+- [x] **Replicate adapter** ✅
   - Model predictions
   - Hosted models
   - Custom deployments
   - Streaming support
   - Notes: Cloud AI platform
+  - Tests: replicate.test.ts
+  - Examples: async-predictions.ts, basic.ts, model-discovery.ts
 
-- [ ] **Cloudflare AI adapter**
+- [x] **Cloudflare AI adapter** ✅
   - Workers AI
   - Text generation
   - Image models
   - Edge inference
   - Notes: Edge AI inference
+  - Tests: cloudflare-ai.test.ts
+  - Examples: basic.ts, embeddings.ts, translation.ts
 
-- [ ] **Ollama adapter**
+- [x] **Ollama adapter** ✅
   - Local model hosting
   - Multiple model support
   - Streaming responses
   - Model management
   - Notes: Run LLMs locally
+  - Tests: ollama.test.ts
+  - Examples: basic.ts, chat.ts, embeddings.ts
 
-- [ ] **vLLM adapter**
+- [x] **vLLM adapter** ✅
   - High-performance inference
   - Model serving
   - OpenAI-compatible API
   - Batching support
   - Notes: Fast local LLM serving
+  - Tests: vllm.test.ts
+  - Examples: basic.ts, chat.ts, embeddings.ts
 
 ### 12.18 Job Queues & Scheduling
 
