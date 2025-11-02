@@ -166,13 +166,12 @@ export function createCloudinaryAdapter(): CloudinaryAdapter {
           format: 'jpg',
           resourceType,
           bytes,
-          width: resourceType === 'image' ? 1920 : undefined,
-          height: resourceType === 'image' ? 1080 : undefined,
+          ...(resourceType === 'image' ? { width: 1920, height: 1080 } : {}),
           createdAt: new Date().toISOString(),
         };
 
         // Store asset for retrieval
-        assets.set(publicId, {
+        const asset: Asset = {
           publicId: result.publicId,
           format: result.format,
           version: 1,
@@ -180,11 +179,12 @@ export function createCloudinaryAdapter(): CloudinaryAdapter {
           type: 'upload',
           createdAt: result.createdAt,
           bytes: result.bytes,
-          width: result.width,
-          height: result.height,
           url: result.url,
           secureUrl: result.secureUrl,
-        });
+        };
+        if (result.width !== undefined) asset.width = result.width;
+        if (result.height !== undefined) asset.height = result.height;
+        assets.set(publicId, asset);
 
         return ok(result);
       } catch (error) {
@@ -192,7 +192,7 @@ export function createCloudinaryAdapter(): CloudinaryAdapter {
       }
     },
 
-    async delete(publicId: string, options: { resourceType?: string } = {}): Promise<Result<void, Error>> {
+    async delete(publicId: string, _options: { resourceType?: string } = {}): Promise<Result<void, Error>> {
       try {
         if (!config) {
           return err(new Error('Adapter not initialized'));
