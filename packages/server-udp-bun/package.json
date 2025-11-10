@@ -1,0 +1,31 @@
+{
+  "name": "@servicejs/server-udp-bun",
+  "version": "0.1.0",
+  "description": "UDP server adapter for ServiceJS using Bun's native UDP API",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "bun test",
+    "dev": "bun run examples/echo-server.ts"
+  },
+  "keywords": [
+    "servicejs",
+    "udp",
+    "server",
+    "bun",
+    "adapter",
+    "datagram"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  }
+}
