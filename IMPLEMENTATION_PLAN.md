@@ -3018,11 +3018,18 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - README: Complete with API reference
   - Notes: Modern HTTP at server-http2-node/src/index.ts:190
 
-- [ ] **Node.js WebSocket server adapter**
+- [x] **Node.js WebSocket server adapter** ✅
   - WebSocket server capability
   - Connection lifecycle as messages
-  - Bidirectional communication
-  - Notes: Real-time communication
+  - Bidirectional communication (text & binary)
+  - Broadcasting to all clients
+  - Ping/pong heartbeat mechanism
+  - Custom endpoint paths
+  - Per-message deflate compression
+  - Tests: websocket-server.test.ts (14 tests)
+  - Examples: echo-server.ts, chat-server.ts, realtime-updates.ts
+  - README: Complete with API reference and patterns
+  - Notes: Real-time communication at server-websocket-node/src/index.ts:337
 
 #### Bun Server Support
 
