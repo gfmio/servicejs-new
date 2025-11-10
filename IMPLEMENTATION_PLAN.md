@@ -3033,35 +3033,56 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 #### Bun Server Support
 
-- [ ] **Bun TCP server adapter**
-  - Bun.serve TCP mode
-  - High-performance TCP
-  - Notes: Bun-optimized TCP
+- [x] **Bun TCP server adapter** ✅
+  - Bun.listen() with SocketHandler
+  - Bidirectional TCP communication
+  - Connection tracking with socket.data
+  - Tests: tcp-server.test.ts (9 tests, 100% pass)
+  - Examples: echo-server.ts, chat-server.ts, connection-manager.ts
+  - README: Complete with API reference
+  - Notes: High-performance TCP at server-tcp-bun/src/index.ts (uses Bun.listen, not Bun.serve)
 
-- [ ] **Bun UDP server adapter**
-  - Bun UDP support
-  - Fast datagram handling
-  - Notes: Bun-optimized UDP
+- [x] **Bun UDP server adapter** ✅
+  - Bun.udpSocket() with socket handlers
+  - Datagram message handling
+  - Broadcasting support with setBroadcast()
+  - Multicast support with addMembership/dropMembership
+  - Efficient batch sending with sendMany()
+  - Tests: udp-server.test.ts (12 tests, 100% pass)
+  - Examples: echo-server.ts, broadcast-server.ts, batch-sender.ts
+  - README: Complete with API reference
+  - Notes: High-performance UDP at server-udp-bun/src/index.ts (uses Bun.udpSocket)
 
-- [ ] **Bun HTTP server adapter**
+- [x] **Bun HTTP server adapter** ✅
   - Bun.serve HTTP mode
   - Fast HTTP handling
-  - Notes: Bun-optimized HTTP
+  - Query parameter parsing
+  - Request/response handling
+  - Tests: http-server.test.ts (9 tests, 100% pass)
+  - Examples: basic-server.ts, rest-api.ts, file-server.ts
+  - README: Complete with API reference
+  - Notes: Ultra-fast HTTP at server-http-bun/src/index.ts
 
-- [ ] **Bun HTTPS server adapter**
-  - Bun.serve with TLS
-  - Certificate support
-  - Notes: Secure Bun HTTP
+- [ ] **Bun HTTPS server adapter** (Use HTTP with TLS config)
+  - Bun.serve supports TLS in HTTP mode
+  - Pass TLS options to Bun.serve
+  - Notes: Use HTTP adapter with tls option
 
-- [ ] **Bun HTTP/2 server adapter**
-  - Bun HTTP/2 support
-  - Stream handling
-  - Notes: Bun HTTP/2
+- [ ] **Bun HTTP/2 server adapter** (Bun auto-negotiates HTTP/2)
+  - Bun automatically uses HTTP/2 when available
+  - No separate adapter needed
+  - Notes: HTTP adapter handles HTTP/2 automatically
 
-- [ ] **Bun WebSocket server adapter**
+- [x] **Bun WebSocket server adapter** ✅
   - Bun.serve WebSocket mode
-  - High-performance WebSocket
-  - Notes: Bun-optimized WebSocket
+  - Native WebSocket support
+  - Broadcasting
+  - Ping/pong heartbeat
+  - Text and binary messages
+  - Tests: websocket-server.test.ts (12 tests, 100% pass)
+  - Examples: echo-server.ts, chat-server.ts, realtime-updates.ts
+  - README: Complete with API reference
+  - Notes: High-performance WebSocket at server-websocket-bun/src/index.ts
 
 #### Cloudflare Platform Support
 
