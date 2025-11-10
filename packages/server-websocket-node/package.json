@@ -1,0 +1,32 @@
+{
+  "name": "@servicejs/server-websocket-node",
+  "version": "0.1.0",
+  "description": "Node.js TCP server adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "bun-types": "latest",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
