@@ -1,0 +1,30 @@
+{
+  "name": "@servicejs/server-http-bun",
+  "version": "0.1.0",
+  "description": "HTTP server adapter for ServiceJS using Bun's native HTTP server",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "bun test",
+    "dev": "bun run examples/basic-server.ts"
+  },
+  "keywords": [
+    "servicejs",
+    "http",
+    "server",
+    "bun",
+    "adapter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  }
+}
