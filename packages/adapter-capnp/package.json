@@ -1,0 +1,37 @@
+{
+  "name": "@servicejs/adapter-capnp",
+  "version": "0.1.0",
+  "description": "Cap'n Proto RPC adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "dev": "bun run examples/basic-rpc.ts"
+  },
+  "keywords": [
+    "servicejs",
+    "capnp",
+    "capnproto",
+    "rpc",
+    "serialization",
+    "microservices"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "capnp-ts": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
