@@ -4408,6 +4408,13 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - Support worker_threads communication
   - Notes: Complete with all capabilities, tests (12/12 passing), examples, and documentation ✅
 
+- [x] **Implement Bun worker runtime (@servicejs/runtime-bun-worker)**
+  - Similar to runtime-bun but uses Web Worker API (globalThis.postMessage)
+  - Support Bun Worker communication with Web Worker standard
+  - Bun-optimized APIs (Bun.file, Bun.write, Bun.CryptoHasher)
+  - Fast startup and efficient message passing
+  - Notes: Complete with all 9 capabilities, tests (12/12 passing), 3 examples, and comprehensive documentation ✅
+
 - [x] **Implement Web Worker runtime (@servicejs/runtime-web-worker)**
   - Similar to runtime-browser but uses self
   - No DOM access
