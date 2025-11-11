@@ -1,0 +1,51 @@
+{
+  "name": "@servicejs/runtime-bun-worker",
+  "version": "0.1.0",
+  "description": "Bun Worker runtime for ServiceJS - Web Worker integration for Bun",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "servicejs",
+    "runtime",
+    "bun",
+    "worker",
+    "capabilities",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/capability-env": "workspace:*",
+    "@servicejs/capability-time": "workspace:*",
+    "@servicejs/capability-lifecycle": "workspace:*",
+    "@servicejs/capability-console": "workspace:*",
+    "@servicejs/capability-fs": "workspace:*",
+    "@servicejs/capability-http": "workspace:*",
+    "@servicejs/capability-streams": "workspace:*",
+    "@servicejs/capability-crypto": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "@servicejs/option": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
