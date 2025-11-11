@@ -1,0 +1,37 @@
+{
+  "name": "@servicejs/adapter-grpc",
+  "version": "0.1.0",
+  "description": "gRPC adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "dev": "bun run examples/basic-service.ts"
+  },
+  "keywords": [
+    "servicejs",
+    "grpc",
+    "rpc",
+    "protobuf",
+    "microservices"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "@grpc/grpc-js": "^1.9.0",
+    "@grpc/proto-loader": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
