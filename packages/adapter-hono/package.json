@@ -1,0 +1,48 @@
+{
+  "name": "@servicejs/adapter-hono",
+  "version": "0.1.0",
+  "description": "Hono web framework adapter for ServiceJS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "bun test",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "servicejs",
+    "hono",
+    "http",
+    "web",
+    "framework",
+    "adapter",
+    "middleware"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "hono": "^4.0.0"
+  }
+}
