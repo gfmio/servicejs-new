@@ -1,0 +1,37 @@
+{
+  "name": "@servicejs/runtime-node-worker",
+  "version": "0.1.0",
+  "description": "Node.js Worker Threads runtime for ServiceJS - worker_threads integration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@servicejs/capability-console": "workspace:*",
+    "@servicejs/capability-crypto": "workspace:*",
+    "@servicejs/capability-env": "workspace:*",
+    "@servicejs/capability-fs": "workspace:*",
+    "@servicejs/capability-http": "workspace:*",
+    "@servicejs/capability-lifecycle": "workspace:*",
+    "@servicejs/capability-streams": "workspace:*",
+    "@servicejs/capability-time": "workspace:*",
+    "@servicejs/option": "workspace:*",
+    "@servicejs/result": "workspace:*",
+    "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}
