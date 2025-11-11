@@ -4403,10 +4403,10 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 ### 13.11 Runtime Package: Workers (@servicejs/runtime-*-worker)
 
-- [ ] **Implement Node.js worker runtime (@servicejs/runtime-node-worker)**
+- [x] **Implement Node.js worker runtime (@servicejs/runtime-node-worker)**
   - Similar to runtime-node but uses parentPort
   - Support worker_threads communication
-  - Notes: Not yet implemented
+  - Notes: Complete with all capabilities, tests (12/12 passing), examples, and documentation ✅
 
 - [x] **Implement Web Worker runtime (@servicejs/runtime-web-worker)**
   - Similar to runtime-browser but uses self
