@@ -1,39 +1,43 @@
 # ServiceJS Implementation Plan
 
 **Version:** 0.1.0
-**Status:** Milestones 0-8 Complete + CAS (10.1) + Security (10.3) + Performance (10.4) + Documentation (10.5-10.6) + Patterns (11.1-11.5) + 64+ Adapters Complete ✅
+**Status:** Milestones 0-8 Complete + CAS (10.1) + Security (10.3) + Performance (10.4) + Documentation (10.5-10.6) + Patterns (11.1-11.5) + 84+ Adapters Complete ✅
 **Last Updated:** 2025-11-11
 
 ## Adapter Implementation Status
 
-**Completed Adapters (64):**
+**Completed Adapters (84):**
 
-- **Databases (13):** SQLite, PostgreSQL, MySQL, MongoDB, Redis, Memcached, SurrealDB, CockroachDB, Cassandra, Neo4j, DynamoDB, ClickHouse, TimescaleDB
-- **ORMs (1):** Drizzle
-- **Message Queues (6):** RabbitMQ, Kafka, NATS, Pulsar, SQS, Cloudflare Queues
+- **Databases (16):** SQLite, PostgreSQL, MySQL, MongoDB, Redis, Memcached, SurrealDB, CockroachDB, Cassandra, Neo4j, DynamoDB, ClickHouse, TimescaleDB, Supabase, PlanetScale, Fauna
+- **ORMs (4):** Drizzle, Prisma, TypeORM, Kysely
+- **Message Queues (8):** RabbitMQ, Kafka, NATS, Pulsar, SQS, Cloudflare Queues, EventBridge, Google Pub/Sub
+- **Cache (4):** Redis Cluster (unified in adapter-redis), LRU Cache, Upstash Redis, Redis Streams (unified in adapter-redis)
 - **Storage (4):** S3, R2, Cloudflare KV, Filesystem (FS)
 - **Email (3):** Resend, SES, SendGrid
-- **Communications (1):** Twilio
+- **Communications (6):** Twilio, Slack, Discord, Telegram, Push Notifications, SMS (types + implementations)
 - **Payments (3):** Stripe, PayPal, Square
 - **Media & CDN (3):** Cloudinary, UploadThing, BunnyCDN
 - **API & Integration (6):** Webhook, GraphQL, tRPC, OpenAPI, HTTP client, TCP client
 - **RPC Protocols (3):** Apache Thrift, gRPC, Cap'n Proto
-- **Observability (3):** Sentry, Datadog, New Relic
+- **Observability (4):** Sentry, Datadog, New Relic, Prometheus (enhanced)
 - **AI/ML (7):** OpenAI, Anthropic, Hugging Face, Replicate, Cloudflare AI, Ollama, vLLM
 - **Job Queues & Scheduling (3):** BullMQ, Agenda, Temporal
+- **Search (4):** Elasticsearch, Algolia, Meilisearch, Typesense
+- **Authentication (6):** Auth0, Clerk, SuperTokens, Keycloak, Auth.js, Lucia
+- **Authorization (1):** Casbin
 - **Web Frameworks (1):** Hono
 
-**In Progress (20+):**
+**Recently Completed (20+):** ✅
 
-- Cache: Redis Cluster, LRU Cache, Upstash Redis, Redis Streams
+- Cache: Redis Cluster (integrated into adapter-redis), LRU Cache, Upstash Redis, Redis Streams (integrated into adapter-redis)
 - Message Brokers: EventBridge, Google Pub/Sub
 - ORMs: Prisma, TypeORM, Kysely
 - Databases: Supabase, PlanetScale, Fauna
 - Search: Elasticsearch, Algolia, Meilisearch, Typesense
-- Auth: Auth0, Clerk, SuperTokens, Keycloak, Auth.js, Lucia
+- Auth: Auth0, Clerk, SuperTokens, Keycloak, Auth.js (adapter-authjs), Lucia
 - Authorization: Casbin
-- Communications: Slack, Discord, Telegram, Push Notifications, SMS types
-- Observability: Prometheus (enhanced)
+- Communications: Slack, Discord, Telegram, Push Notifications, SMS types (adapter-sms)
+- Observability: Prometheus (enhanced in @servicejs/observability)
 
 ---
 
