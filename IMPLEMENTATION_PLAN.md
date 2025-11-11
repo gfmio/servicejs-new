@@ -3097,42 +3097,50 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
 
 **Implemented in @servicejs/server-cloudflare-workers:**
 
-- [x] **Cloudflare Workers HTTP/fetch adapter** ✅
+- [x] **Cloudflare Workers HTTP/fetch adapter** ✅ (10 tests passing)
   - Request/Response handling with `createFetchHandler()`
   - Fetch event adapter
-  - Environment bindings integration
+  - Environment bindings integration (KV, D1, R2)
   - Automatic error responses
   - Type-safe with generics
+  - Examples: fetch-handler-example.ts (KV, D1, R2 bindings)
   - Notes: Production-ready at server-cloudflare-workers/src/fetch-handler.ts
 
-- [x] **Cloudflare Durable Objects integration** ✅
+- [x] **Cloudflare Durable Objects integration** ✅ (11 tests passing)
   - `ServiceDurableObject` base class
   - DO lifecycle management (onInit, onFetch, onAlarm, onError)
   - State persistence via this.state.storage
   - Alarm scheduling (scheduleAlarm, getAlarm, deleteAlarm)
   - Automatic initialization with blockConcurrencyWhile
+  - Examples: durable-object-counter.ts (stateful counter with alarms)
   - Notes: Production-ready at server-cloudflare-workers/src/durable-object.ts
 
-- [x] **Cloudflare Workers RPC integration** ✅
+- [x] **Cloudflare Workers RPC integration** ✅ (19 tests passing)
   - `createRPCClient()` for type-safe RPC calls
   - `createRPCService()` for RPC service handlers
   - Service bindings integration
   - Result-based error handling
+  - Examples: rpc-microservices.ts (User Service, Order Service, API Gateway)
   - Notes: Production-ready at server-cloudflare-workers/src/rpc-handler.ts
 
-- [x] **Cloudflare Workers Scheduled Events** ✅
+- [x] **Cloudflare Workers Scheduled Events** ✅ (13 tests passing)
   - `createScheduledHandler()` for cron triggers
   - Scheduled message dispatch
   - Background job processing
   - Automatic error logging
+  - Examples: scheduled-and-queue.ts (daily cleanup, hourly health checks, weekly reports)
   - Notes: Production-ready at server-cloudflare-workers/src/scheduled-handler.ts
 
-- [x] **Cloudflare Workers Queue integration** ✅
+- [x] **Cloudflare Workers Queue integration** ✅ (12 tests passing)
   - `createQueueHandler()` for queue consumers
   - Batch processing patterns
   - Automatic message acknowledgment
   - Configurable retry handling (maxRetries, autoRetry)
+  - Examples: scheduled-and-queue.ts (email queue, report queue with priority)
   - Notes: Production-ready at server-cloudflare-workers/src/queue-handler.ts
+
+**Test Summary**: 65/65 tests passing ✅
+**Examples**: 4 comprehensive examples covering all features
 
 - [ ] **Cloudflare Pages Functions integration** (Future)
   - Pages Functions adapter
@@ -3157,9 +3165,17 @@ All sections 9.1-9.9 are **100% complete**, including section 9.8 (Built-in Inst
   - API routes
   - Notes: React framework
 
-- [ ] **Hono integration** (DEFERRED)
-  - Edge runtime support
-  - Notes: Modern web framework
+- [x] **Hono integration** ✅ (@servicejs/adapter-hono - 21 tests passing)
+  - `createHonoAdapter()` - Main factory function
+  - Route configuration with service handlers
+  - Built-in input parsers (json, params, query, bodyAndParams, all)
+  - Built-in middleware (CORS, requestId, timing)
+  - `createServiceHandler()` - Helper for Result-based handlers
+  - Automatic error handling with custom formatters
+  - Response formatting support
+  - Multi-runtime support (Bun, Cloudflare Workers, Deno)
+  - Examples: basic-api.ts (REST API), advanced-patterns.ts (auth, validation, rate limiting)
+  - Notes: Production-ready web framework integration at packages/adapter-hono
 
 #### Deferred RPC/Protocol Integrations
 
