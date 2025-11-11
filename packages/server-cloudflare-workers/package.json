@@ -1,0 +1,35 @@
+{
+  "name": "@servicejs/server-cloudflare-workers",
+  "version": "0.1.0",
+  "description": "Cloudflare Workers server adapter for ServiceJS - HTTP, Durable Objects, RPC, Scheduled Events, and more",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest",
+    "dev": "wrangler dev"
+  },
+  "keywords": [
+    "servicejs",
+    "cloudflare",
+    "workers",
+    "edge",
+    "adapter",
+    "durable-objects",
+    "serverless"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@servicejs/result": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "@types/node": "^20.10.6",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "wrangler": "^3.22.1"
+  }
+}
